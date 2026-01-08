@@ -1,0 +1,17 @@
+roles-config:
+  roles:
+    - name: ADMIN
+      permissions:
+        - USER_CREATE
+        - USER_READ
+        - USER_UPDATE
+        - USER_DELETE
+        - TOKEN_REVOKE
+        - CREATE_API_KEY
+        - REVOKE_API_KEY
+    - name: USER
+      permissions:
+        - UPDATE_PROFILE
+        - CREATE_API_KEY
+        - REVOKE_API_KEY
+        - DASHBOARD_VIEW

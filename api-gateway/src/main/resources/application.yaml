@@ -1,0 +1,100 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: api-gateway
+  jackson:
+    default-property-inclusion: non_null
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+  cloud:
+    config:
+      enabled: false
+    gateway:
+      server:
+        webflux:
+          routes:
+            - id: auth-service
+              uri: http://localhost:5000
+              predicates:
+                - Path=/api/external/v1/auth/**
+                
+            - id: jwt-auth-route
+              uri: http://localhost:5000
+              predicates:
+                - Path=/api/external/v1/users/**, /api/external/v1/query/**
+              filters:
+                - name: JwtAuth
+                
+             
+            - id: api-key-route
+              uri: http://localhost:5000
+              predicates:
+                - Path=/api/external/v1/ingest/**
+              filters:
+                - name: ApiKeyAuth
+                
+
+app:
+  security:
+    cache:
+      type: caffeine # caffe for caffeine cache, redis for redis
+    auth:
+      service:
+        base-url: http://localhost:5000
+    
+
+resilience4j:
+  circuitbreaker:
+    instances:
+      jwtServiceCircuit:
+        slidingWindowSize: 10
+        failureRateThreshold: 50
+        waitDurationInOpenState: 10s
+      apiKeyServiceCircuit:
+        slidingWindowSize: 10
+        failureRateThreshold: 50
+  timelimiter:
+    instances:
+      jwtServiceCircuit:
+        timeoutDuration: 3s
+      apiKeyServiceCircuit:
+        timeoutDuration: 3s
+        
+management:
+  endpoint:
+    gateway:
+      access: read-only
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus,gateway,refresh
+  tracing:
+    sampling:
+      # Trace 100% of requests in dev; reduce in prod
+      probability: 1.0
+  otlp:
+    tracing:
+      enabled: false
+      # OTLP collector endpoint (gRPC)
+      #endpoint: http://localhost:4317
+    otlp:
+    metrics:
+      export:
+        enabled: false
+      
+
+logging:
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [%thread] [${spring.application.name:}, traceId=%X{traceId:-}, spanId=%X{spanId:-}] [%logger{0}.%M:%L] - %msg%n"
+  level:
+    root: INFO
+    com.telemetry.engine: DEBUG
+    org.springframework.security: DEBUG
+    org.springframework.cloud.gateway: DEBUG
+    reactor.netty.http.client: DEBUG
+    org.springframework.cloud.gateway.route.RouteDefinitionRouteLocator: TRACE
