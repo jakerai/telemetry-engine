@@ -1,5 +1,7 @@
 package com.telemetry.engine.common.context;
 
+import io.opentelemetry.api.trace.Span;
+
 /**
  * RequestContext provides a lightweight way to store request-scoped data (such as the authenticated
  * user Id and client IP address) during the lifecycle of a single HTTP request.
@@ -65,6 +67,13 @@ public class RequestContext {
     userId.remove();
     clientIp.remove();
     refreshTokenId.remove();
+  }
+
+  public static String getTraceId() {
+    Span currentSpan = Span.current();
+    return (currentSpan != null && currentSpan.getSpanContext().isValid())
+        ? currentSpan.getSpanContext().getTraceId()
+        : "no-trace-id";
   }
 
 }

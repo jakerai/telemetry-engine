@@ -1,4 +1,4 @@
-package com.telemetry.engine.auth.security;
+package com.telemetry.engine.auth.security.service;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -11,6 +11,7 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 import com.telemetry.engine.auth.core.user.entity.User;
 import com.telemetry.engine.auth.core.user.persistence.UserPersistence;
+import com.telemetry.engine.auth.security.model.AuthenticatedUser;
 
 
 @Service

@@ -3,7 +3,7 @@ package com.telemetry.engine.auth.security.jwt.key.service;
 import javax.crypto.Cipher;
 import javax.crypto.spec.SecretKeySpec;
 import org.springframework.stereotype.Component;
-import com.telemetry.engine.auth.security.jwt.key.config.JwtProperties;
+import com.telemetry.engine.auth.config.JwtProperties;
 import com.telemetry.engine.common.constansts.Algorithms;
 import com.telemetry.engine.common.utils.SecretUtils;
 import lombok.extern.slf4j.Slf4j;

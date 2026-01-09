@@ -5,7 +5,7 @@ import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.jwt.Jwt;
-import com.telemetry.engine.auth.security.AuthenticatedUser;
+import com.telemetry.engine.auth.security.model.AuthenticatedUser;
 import com.telemetry.engine.common.exception.UnauthorizedException;
 import lombok.extern.slf4j.Slf4j;
 

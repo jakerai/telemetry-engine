@@ -1,4 +1,4 @@
-package com.telemetry.engine.auth.security;
+package com.telemetry.engine.auth.security.model;
 
 import java.util.Collection;
 import java.util.Set;

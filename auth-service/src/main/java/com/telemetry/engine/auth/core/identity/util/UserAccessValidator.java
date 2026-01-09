@@ -4,7 +4,7 @@ import java.util.Arrays;
 import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import com.telemetry.engine.auth.security.AuthenticatedUser;
+import com.telemetry.engine.auth.security.model.AuthenticatedUser;
 import com.telemetry.engine.common.exception.UnauthorizedException;
 
 public final class UserAccessValidator {

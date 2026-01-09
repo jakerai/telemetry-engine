@@ -23,7 +23,7 @@ import com.telemetry.engine.auth.core.user.entity.User;
 import com.telemetry.engine.auth.core.user.mapper.UserMapper;
 import com.telemetry.engine.auth.core.user.persistence.UserPersistence;
 import com.telemetry.engine.auth.core.user.service.UserService;
-import com.telemetry.engine.auth.security.AuthenticatedUser;
+import com.telemetry.engine.auth.security.model.AuthenticatedUser;
 import com.telemetry.engine.common.dto.response.ServiceResponse;
 import com.telemetry.engine.common.exception.DuplicateResourceException;
 import com.telemetry.engine.common.exception.NotFoundException;

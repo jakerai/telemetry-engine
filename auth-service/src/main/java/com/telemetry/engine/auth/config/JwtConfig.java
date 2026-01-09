@@ -1,4 +1,4 @@
-package com.telemetry.engine.auth.security.jwt.config;
+package com.telemetry.engine.auth.config;
 
 import java.security.interfaces.RSAPublicKey;
 import java.text.ParseException;

@@ -3,7 +3,7 @@ package com.telemetry.engine.auth.security.jwt.key.service;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import org.springframework.stereotype.Component;
-import com.telemetry.engine.auth.security.jwt.key.config.JwtProperties;
+import com.telemetry.engine.auth.config.JwtProperties;
 import com.telemetry.engine.common.constansts.Algorithms;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

@@ -23,7 +23,7 @@ public class ApiKeyAuthServiceImpl implements ApiKeyAuthService {
   @Override
   public Mono<ApiKeyMeta> isValid(String apiKey) {
     if (apiKey == null || apiKey.isBlank()) {
-      log.warn("[ApiKeyAuthService] Received blank API key");
+      log.warn("Received blank API key");
       return Mono.empty();
     }
 
@@ -34,7 +34,7 @@ public class ApiKeyAuthServiceImpl implements ApiKeyAuthService {
       
       if (meta.getExpiresAt() != null && Instant.now().isAfter(meta.getExpiresAt())) {
         // Key expired, invalidate reactively
-        log.info("[ApiKeyAuthServiceImpl.isValid] API key {} expired at {}",
+        log.info("API key {} expired at {}",
             SecretUtils.maskSensitiveData(apiKeyHash), meta.getExpiresAt());
         return authCache.invalidate(apiKeyHash).then(Mono.<ApiKeyMeta>empty());
       }

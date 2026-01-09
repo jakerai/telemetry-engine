@@ -1,6 +1,7 @@
 package com.telemetry.engine.common.dto.response;
 
 import java.time.Instant;
+import com.telemetry.engine.common.context.RequestContext;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -20,4 +21,6 @@ public class ResponseStatus {
   private Object errors;
   @Builder.Default
   private Instant timestamp = Instant.now();
+  @Builder.Default
+  private String requestId = RequestContext.getTraceId();
 }

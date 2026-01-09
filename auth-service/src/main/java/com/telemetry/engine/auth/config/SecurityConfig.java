@@ -1,4 +1,4 @@
-package com.telemetry.engine.auth.security.config;
+package com.telemetry.engine.auth.config;
 
 import java.util.ArrayList;
 import java.util.List;

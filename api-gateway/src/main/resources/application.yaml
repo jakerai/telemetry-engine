@@ -22,6 +22,11 @@ spring:
               uri: http://localhost:5000
               predicates:
                 - Path=/api/external/v1/auth/**
+              filters:
+                - name: CircuitBreaker
+                  args:
+                    name: authCircuitBreaker
+                    fallbackUri: forward:/fallback/auth
                 
             - id: jwt-auth-route
               uri: http://localhost:5000
@@ -29,16 +34,22 @@ spring:
                 - Path=/api/external/v1/users/**, /api/external/v1/query/**
               filters:
                 - name: JwtAuth
-                
+                - name: CircuitBreaker
+                  args:
+                    name: jwtCircuitBreaker
+                    fallbackUri: forward:/fallback/jwt
              
             - id: api-key-route
-              uri: http://localhost:5000
+              uri: http://localhost:5001
               predicates:
-                - Path=/api/external/v1/ingest/**
+                - Path=/api/v1/ingest/**
               filters:
                 - name: ApiKeyAuth
-                
-
+                - name: CircuitBreaker
+                  args:
+                    name: apiKeyCircuitBreaker
+                    fallbackUri: forward:/fallback/apikey
+               
 app:
   security:
     cache:
@@ -51,19 +62,25 @@ app:
 resilience4j:
   circuitbreaker:
     instances:
-      jwtServiceCircuit:
+      authCircuitBreaker:
         slidingWindowSize: 10
-        failureRateThreshold: 50
+        failureRateThreshold: 1
         waitDurationInOpenState: 10s
-      apiKeyServiceCircuit:
-        slidingWindowSize: 10
-        failureRateThreshold: 50
+      jwtCircuitBreaker:
+        slidingWindowSize: 5
+        failureRateThreshold: 1
+      apiKeyCircuitBreaker:
+        slidingWindowSize: 20
+        failureRateThreshold: 70
   timelimiter:
     instances:
-      jwtServiceCircuit:
+      authCircuitBreaker:
         timeoutDuration: 3s
-      apiKeyServiceCircuit:
+      jwtCircuitBreaker:
         timeoutDuration: 3s
+      apiKeyCircuitBreaker:
+        timeoutDuration: 3s
+        
         
 management:
   endpoint:

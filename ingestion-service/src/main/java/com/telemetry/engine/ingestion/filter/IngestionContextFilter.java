@@ -26,7 +26,7 @@ public class IngestionContextFilter implements WebFilter {
             : "unknown";
 
     if ("anonymous".equals(userId)) {
-        log.warn("[IngestionFilter] Missing X-User-Id header from ip={}", clientIp);
+        log.warn("Missing X-User-Id header from ip={}", clientIp);
     }
 
     return chain.filter(exchange)

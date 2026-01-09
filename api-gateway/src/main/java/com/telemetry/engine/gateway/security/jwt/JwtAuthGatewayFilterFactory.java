@@ -1,14 +1,15 @@
 package com.telemetry.engine.gateway.security.jwt;
 
 import java.util.Optional;
-import java.util.UUID;
 import org.springframework.cloud.gateway.filter.GatewayFilter;
 import org.springframework.cloud.gateway.filter.factory.AbstractGatewayFilterFactory;
 import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.stereotype.Component;
 import com.telemetry.engine.common.constansts.ContextConstants;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @Component
 public class JwtAuthGatewayFilterFactory
     extends AbstractGatewayFilterFactory<JwtAuthGatewayFilterFactory.Config> {
@@ -19,15 +20,14 @@ public class JwtAuthGatewayFilterFactory
 
   @Override
   public GatewayFilter apply(Config config) {
+    log.debug("Validating request using jwt");
     return (exchange, chain) -> exchange.getPrincipal().cast(JwtAuthenticationToken.class)
         .flatMap(auth -> {
 
           String userId = auth.getToken().getClaimAsString("userId") != null
               ? auth.getToken().getClaimAsString("userId")
               : "0";
-          String requestId =
-              Optional.ofNullable(exchange.getRequest().getHeaders().getFirst("X-Request-Id"))
-                  .orElse(UUID.randomUUID().toString());
+          
           String clientIp =
               Optional.ofNullable(exchange.getRequest().getHeaders().getFirst("X-Forwarded-For"))
                   .orElseGet(() -> {
@@ -40,11 +40,11 @@ public class JwtAuthGatewayFilterFactory
           // propagating per-request information downstream
           ServerHttpRequest mutatedRequest =
               exchange.getRequest().mutate().header("X-User-Id", userId)
-                  .header("X-Request-Id", requestId).header("X-Client-Ip", clientIp).build();
+                  .header("X-Client-Ip", clientIp).build();
 
           return chain.filter(exchange.mutate().request(mutatedRequest).build())
               .contextWrite(ctx -> ctx.put(ContextConstants.CONTEXT_USER_ID, userId)
-                  .put(ContextConstants.CONTEXT_REQUEST_ID, requestId));
+                  .put(ContextConstants.CONTEXT_CLIENT_IP, clientIp));
 
         }).switchIfEmpty(chain.filter(exchange));
   }

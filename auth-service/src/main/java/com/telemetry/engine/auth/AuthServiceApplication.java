@@ -8,7 +8,7 @@ import org.springframework.data.domain.AuditorAware;
 import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import com.telemetry.engine.auth.core.identity.util.AuthUtil;
-import com.telemetry.engine.auth.security.AuthenticatedUser;
+import com.telemetry.engine.auth.security.model.AuthenticatedUser;
 import com.telemetry.engine.common.exception.UnauthorizedException;
 
 @SpringBootApplication

@@ -14,7 +14,7 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
-import com.telemetry.engine.auth.security.jwt.key.config.JwtProperties;
+import com.telemetry.engine.auth.config.JwtProperties;
 import com.telemetry.engine.auth.security.jwt.key.enums.JwtKeyStatus;
 import com.telemetry.engine.auth.security.jwt.key.model.JwtKeys;
 import com.telemetry.engine.auth.security.jwt.key.model.Key;

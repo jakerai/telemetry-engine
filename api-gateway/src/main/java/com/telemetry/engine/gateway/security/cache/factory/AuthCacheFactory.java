@@ -19,7 +19,7 @@ public class AuthCacheFactory {
 
 
   public AuthCache getType() {
-    log.info("[AuthCacheFactory.getType] Loading cache type={}", securityProperties.getType());
+    log.info("Loading cache type={}", securityProperties.getType());
     return switch (securityProperties.getType().toLowerCase()) {
       case "caffe", "caffeine" -> caffeineAuthCache;
       case "redis", "elasticache" -> redisAuthCache;

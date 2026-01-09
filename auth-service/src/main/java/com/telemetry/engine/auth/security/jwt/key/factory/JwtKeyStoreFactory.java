@@ -1,7 +1,7 @@
 package com.telemetry.engine.auth.security.jwt.key.factory;
 
 import org.springframework.stereotype.Component;
-import com.telemetry.engine.auth.security.jwt.key.config.JwtProperties;
+import com.telemetry.engine.auth.config.JwtProperties;
 import com.telemetry.engine.auth.security.jwt.key.store.JwtKeyStore;
 import com.telemetry.engine.auth.security.jwt.key.store.impl.AwsJwtKeyStore;
 import com.telemetry.engine.auth.security.jwt.key.store.impl.DatabaseJwtKeyStore;

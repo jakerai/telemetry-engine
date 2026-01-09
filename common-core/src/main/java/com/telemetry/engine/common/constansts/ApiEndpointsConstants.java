@@ -23,7 +23,7 @@ public class ApiEndpointsConstants {
   public static final String[] ALL_PUBLIC_EXTERNAL_ENDPOINTS =
       {"/api/external/v1/auth/signup", "/api/external/v1/auth/login",
           "/api/external/v1/auth/refresh-token", "/api/external/v1/auth/forgot-password",
-          "/api/external/v1/auth/reset-password", "/api/external/v1/ingest", "/actuator/**"};
+          "/api/external/v1/auth/reset-password", "/api/v1/ingest", "/actuator/**"};
 
 
   private static final String[] INTERNAL_ONLY_ENDPOINTS =

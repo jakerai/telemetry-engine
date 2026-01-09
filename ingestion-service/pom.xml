@@ -53,10 +53,13 @@
 			<artifactId>spring-cloud-starter-config</artifactId>
 		</dependency>
 		<dependency>
-			<groupId>org.springframework.kafka</groupId>
-			<artifactId>spring-kafka</artifactId>
+            <groupId>io.projectreactor.kafka</groupId>
+            <artifactId>reactor-kafka</artifactId>
+        </dependency>
+        <dependency>
+			<groupId>org.springframework.cloud</groupId>
+			<artifactId>spring-cloud-starter-circuitbreaker-reactor-resilience4j</artifactId>
 		</dependency>
-
 		<!-- 
 			Micrometer OTLP registry: 
 			- Allows Spring Boot (Micrometer) to export **metrics** to an OTLP endpoint (collector, Jaeger, Tempo, Honeycomb, etc.).

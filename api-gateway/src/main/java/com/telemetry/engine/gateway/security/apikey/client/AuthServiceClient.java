@@ -25,7 +25,7 @@ public class AuthServiceClient {
   }
 
   public Mono<ApiKeyMeta> fetchApiKeyMeta(String apiKey) {
-    log.info("[AuthServiceClient.fetchApiKeyMeta] Fetching apiKey={} from auth-service", apiKey);
+    log.info("Fetching apiKey={} from auth-service", apiKey);
 
 
     ApiKeyValidateRequest validateRequest = ApiKeyValidateRequest.builder().apiKey(apiKey).build();

@@ -8,7 +8,7 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
-import com.telemetry.engine.auth.security.AuthenticatedUser;
+import com.telemetry.engine.auth.security.model.AuthenticatedUser;
 import com.telemetry.engine.common.context.RequestContext;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;

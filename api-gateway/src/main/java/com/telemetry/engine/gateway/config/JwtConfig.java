@@ -23,7 +23,7 @@ public class JwtConfig {
    */
   @Bean
   public ReactiveJwtDecoder reactiveJwtDecoder() {
-    log.info("[JwtConfig.reactiveJwtDecoder] Fetchig jwt decoder from base url={}", baseUrl);
+    log.info("Fetchig jwt decoder from base url={}", baseUrl);
     return NimbusReactiveJwtDecoder.withJwkSetUri(baseUrl + "/internal/v1/.well-known/jwks.json")
         .build();
   }

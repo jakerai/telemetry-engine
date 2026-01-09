@@ -1,4 +1,4 @@
-package com.telemetry.engine.auth.security.jwt.key.config;
+package com.telemetry.engine.auth.config;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Configuration;
