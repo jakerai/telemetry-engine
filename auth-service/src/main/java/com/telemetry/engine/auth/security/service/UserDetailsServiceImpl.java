@@ -3,7 +3,6 @@ package com.telemetry.engine.auth.security.service;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.cache.annotation.Cacheable;
 import org.springframework.security.authentication.DisabledException;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -21,10 +20,9 @@ public class UserDetailsServiceImpl implements UserDetailsService {
   @Autowired
   private UserPersistence userPersistence;
 
-  @Cacheable(value = "usersCache", key = "#username")
   @Override
   public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-    log.info("[UserDetailsServiceImpl.loadUserByUsername] loading user by username={}", username);
+    log.info("Loading user by username={}", username);
 
     User user = userPersistence.findByUsername(username).orElseThrow(() -> {
       log.warn("User not found: username={}", username);
@@ -37,7 +35,7 @@ public class UserDetailsServiceImpl implements UserDetailsService {
   }
 
   private void validateUserStatus(User user) {
-    log.info("[UserDetailsServiceImpl.validateUserStatus] Validating user status: email={}",
+    log.info("Validating user status: email={}",
         user.getEmail());
     switch (user.getStatus()) {
       case BANNED:

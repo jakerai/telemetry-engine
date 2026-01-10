@@ -24,7 +24,7 @@ public class UserPersistenceImpl implements UserPersistence {
     try {
       return userRepository.save(user);
     } catch (DataAccessException ex) {
-      log.error("[UserPersistenceImpl.save] DB error while saving user: email={}", user.getEmail(),
+      log.error("DB error while saving user: email={}", user.getEmail(),
           ex);
       throw new DataPersistenceException("Failed to save user");
     }
@@ -37,7 +37,7 @@ public class UserPersistenceImpl implements UserPersistence {
     try {
       return userRepository.findByUsername(username);
     } catch (DataAccessException ex) {
-      log.error("[UserPersistenceImpl.findByUsername] DB error while fetching user: username={}",
+      log.error("DB error while fetching user: username={}",
           username, ex);
       throw new DataPersistenceException("Failed to fetch user");
     }
@@ -50,7 +50,7 @@ public class UserPersistenceImpl implements UserPersistence {
     try {
       return userRepository.findByEmail(email);
     } catch (DataAccessException ex) {
-      log.error("[UserPersistenceImpl.findByEmail] DB error while fetching user: email={}", email,
+      log.error("DB error while fetching user: email={}", email,
           ex);
       throw new DataPersistenceException("Failed to fetch user");
     }
@@ -63,7 +63,7 @@ public class UserPersistenceImpl implements UserPersistence {
     try {
       return userRepository.findById(userId);
     } catch (DataAccessException ex) {
-      log.error("[UserPersistenceImpl.findById] DB error while fetching user: user ID={}", userId,
+      log.error("DB error while fetching user: user ID={}", userId,
           ex);
       throw new DataPersistenceException("Failed to fetch user");
     }

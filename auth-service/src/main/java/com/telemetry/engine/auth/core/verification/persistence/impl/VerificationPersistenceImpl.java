@@ -25,7 +25,7 @@ public class VerificationPersistenceImpl implements VerificationPersistence {
       return verificationRepository.save(verification);
     } catch (DataAccessException ex) {
       log.error(
-          "[VerificationPersistenceImpl.save] DB error while saving verification code: user ID={}",
+          "DB error while saving verification code: user ID={}",
           verification.getUserId(), ex);
       throw new DataPersistenceException("Failed to save verification code");
     }
@@ -39,7 +39,7 @@ public class VerificationPersistenceImpl implements VerificationPersistence {
       return verificationRepository.findByUserIdAndCode(userId, codeHash);
     } catch (DataAccessException ex) {
       log.error(
-          "[VerificationPersistenceImpl.findByUserIdAndCode] DB error while fetching verfication code: user ID={}",
+          "DB error while fetching verfication code: user ID={}",
           userId, ex);
       throw new DataPersistenceException("Failed to fetch verification");
     }

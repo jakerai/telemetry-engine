@@ -1,4 +1,4 @@
-package com.telemetry.engine.auth.core.identity.util;
+package com.telemetry.engine.auth.util;
 
 import java.util.Optional;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
@@ -32,7 +32,7 @@ public class AuthUtil {
    * 
    */
   public static Optional<AuthenticatedUser> getCurrentUserOptional() {
-    log.info("[AuthUtil.getCurrentUserOptional] Retrieving current user");
+    log.info("Retrieving current user");
 
     Authentication auth = SecurityContextHolder.getContext().getAuthentication();
     if (auth == null || !auth.isAuthenticated() || auth instanceof AnonymousAuthenticationToken) {

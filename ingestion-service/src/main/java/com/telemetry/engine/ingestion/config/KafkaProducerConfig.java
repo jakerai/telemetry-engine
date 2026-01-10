@@ -7,6 +7,7 @@ import org.apache.kafka.common.serialization.StringSerializer;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import com.telemetry.engine.ingestion.kafka.serializer.JsonSerializer;
 import reactor.kafka.sender.KafkaSender;
 import reactor.kafka.sender.SenderOptions;
 
@@ -35,7 +36,8 @@ public class KafkaProducerConfig {
     // Serializer for the message key (String -> bytes)
     props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
     // Serializer for the message value (Object -> JSON)
-    props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
+    props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, JsonSerializer.class);
+
 
     // wait up to 5ms to batch messages
     props.put(ProducerConfig.LINGER_MS_CONFIG, 5);
@@ -44,7 +46,7 @@ public class KafkaProducerConfig {
     // Compress batches to reduce network usage and improve throughput
     props.put(ProducerConfig.COMPRESSION_TYPE_CONFIG, "lz4");
     // Leader must acknowledge, faster than waiting for all replicas
-    props.put(ProducerConfig.ACKS_CONFIG, "1");
+    props.put(ProducerConfig.ACKS_CONFIG, "all");
     props.put(ProducerConfig.ENABLE_IDEMPOTENCE_CONFIG, true); // no duplicates
     props.put(ProducerConfig.RETRIES_CONFIG, 3); // retry 3 times
     props.put(ProducerConfig.MAX_IN_FLIGHT_REQUESTS_PER_CONNECTION, 5);

@@ -42,7 +42,7 @@ public class JwtKeyManager {
 
   @PostConstruct
   public void init() {
-    log.info("[JwtKeyManager.init] Loading");
+    log.info("Loading Jwt Key manager");
     try {
       refreshInternalState();
     } catch (Exception e) {
@@ -52,8 +52,7 @@ public class JwtKeyManager {
   }
 
   private synchronized void refreshInternalState() {
-    log.info(
-        "[JwtKeyManager.refreshInternalState] Refreshing internal key state and rebuilding cache");
+    log.info("Refreshing internal key state and rebuilding cache");
     Optional<JwtKeys> keysOpt = jwtKeyStore.findKeys();
 
     if (keysOpt.isPresent() && !keysOpt.get().getKeys().isEmpty()) {
@@ -74,7 +73,7 @@ public class JwtKeyManager {
   }
 
   private void rebuildCaches() {
-    log.info("[JwtKeyManager.rebuildCaches] Caching private and public keys");
+    log.info("Caching private and public keys");
     // Caching the Private Key for signing
     this.cachedPrivateKey = decryptPrivateKey(this.currentKey);
 
@@ -87,17 +86,17 @@ public class JwtKeyManager {
   }
 
   public PrivateKey getCurrentPrivateKey() {
-    log.info("[JwtKeyManager.getCurrentPrivateKey] Fetching private key");
+    log.info("Fetching private key");
     return this.cachedPrivateKey;
   }
 
   public RSAPublicKey getCurrentPublicKey() {
-    log.info("[JwtKeyManager.getCurrentPublicKey] Fetching public key for the current kid");
+    log.info("Fetching public key for the current kid");
     return getPublicKeyByKid(currentKey.getKid());
   }
 
   public RSAPublicKey getPublicKeyByKid(String kid) {
-    log.info("[JwtKeyManager.getPublicKeyByKid] Fetching public key for the provided kid");
+    log.info("Fetching public key for the provided kid");
     RSAPublicKey key = publicKeyCache.get(kid);
 
     /*
@@ -116,7 +115,7 @@ public class JwtKeyManager {
   }
 
   private PrivateKey decryptPrivateKey(Key localKey) {
-    log.info("[JwtKeyManager.decryptPrivateKey] Decrypting private key");
+    log.info("Decrypting private key");
     try {
       byte[] decrypted =
           encryption.decrypt(Base64.getDecoder().decode(localKey.getEncryptedPrivateKey()));
@@ -129,7 +128,7 @@ public class JwtKeyManager {
   }
 
   private RSAPublicKey buildPublicKey(String base64) {
-    log.info("[JwtKeyManager.buildPublicKey] Building public key for base64={}", base64);
+    log.info("Building public key for base64={}", base64);
     try {
       byte[] decoded = Base64.getDecoder().decode(base64);
       return (RSAPublicKey) KeyFactory.getInstance(Algorithms.RSA)
@@ -151,7 +150,7 @@ public class JwtKeyManager {
 
   private synchronized void rotateIfNeeded() {
     long rotateBeforeSeconds = props.getRotation().getRotateBeforeSeconds();
-    log.info("[JwtKeyManager.rotateIfNeeded] Checking if rotation is required: rotateBeforeSeconds={}", rotateBeforeSeconds);
+    log.info("Checking if rotation is required: rotateBeforeSeconds={}", rotateBeforeSeconds);
     Key localCurrent = this.currentKey;
     Key localPrevious = this.previousKey;
 
@@ -185,7 +184,7 @@ public class JwtKeyManager {
   }
 
   private Key createNewKey() {
-    log.info("[JwtKeyManager.createNewKey] Creating new key");
+    log.info("Creating new key");
     var kp = generator.generate();
     byte[] encryptedBytes = encryption.encrypt(kp.getPrivate().getEncoded());
 
@@ -197,7 +196,7 @@ public class JwtKeyManager {
   }
 
   private Key createNewKeyAndSave() {
-    log.info("[JwtKeyManager.createNewKeyAndSave] Creating and saving new key");
+    log.info("Creating and saving new key");
     Key key = createNewKey();
     this.currentKey = key;
     saveKeys();
@@ -205,13 +204,13 @@ public class JwtKeyManager {
   }
 
   private void saveKeys() {
-    log.info("[JwtKeyManager.saveKeys] Saving keys");
+    log.info("Saving keys");
     List<Key> list = previousKey != null ? List.of(previousKey, currentKey) : List.of(currentKey);
     jwtKeyStore.saveKeys(JwtKeys.builder().keys(list).build());
   }
 
   public Key getCurrentKey() {
-    log.info("[JwtKeyManager.getCurrentKey] Fetching current key");
+    log.info("Fetching current key");
     return this.currentKey;
   }
 

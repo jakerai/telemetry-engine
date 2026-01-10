@@ -8,12 +8,11 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.util.Assert;
 import org.springframework.web.multipart.MultipartFile;
-import com.telemetry.engine.auth.core.file.service.FileService;
+import com.telemetry.engine.auth.core.file.FileService;
 import com.telemetry.engine.auth.core.identity.dto.request.SignupRequest;
 import com.telemetry.engine.auth.core.identity.dto.response.MyProfileResponse;
 import com.telemetry.engine.auth.core.identity.dto.response.PictureUploadResponse;
 import com.telemetry.engine.auth.core.identity.dto.response.UserProfileResponse;
-import com.telemetry.engine.auth.core.identity.util.AuthUtil;
 import com.telemetry.engine.auth.core.permission.entity.Permission;
 import com.telemetry.engine.auth.core.role.contract.RoleAware;
 import com.telemetry.engine.auth.core.role.entity.Role;
@@ -24,6 +23,7 @@ import com.telemetry.engine.auth.core.user.mapper.UserMapper;
 import com.telemetry.engine.auth.core.user.persistence.UserPersistence;
 import com.telemetry.engine.auth.core.user.service.UserService;
 import com.telemetry.engine.auth.security.model.AuthenticatedUser;
+import com.telemetry.engine.auth.util.AuthUtil;
 import com.telemetry.engine.common.dto.response.ServiceResponse;
 import com.telemetry.engine.common.exception.DuplicateResourceException;
 import com.telemetry.engine.common.exception.NotFoundException;
@@ -43,7 +43,7 @@ public class UserServiceImpl implements UserService {
 
 
   private User findByIdOrThrow(Long userId) {
-    log.info("[UserServiceImpl.findByIdOrThrow] Finding user by user ID={}", userId);
+    log.info("Finding user by user ID={}", userId);
     return userPersistence.findById(userId).orElseThrow(() -> {
       log.warn("User not found: user ID={}", userId);
       return new NotFoundException("User not found");
@@ -52,7 +52,7 @@ public class UserServiceImpl implements UserService {
 
 
   private <T extends RoleAware> T enrichUserWithRoles(User user, T dto) {
-    log.info("[UserServiceImpl.enrichUserWithRoles] Enriching user ID={}", user.getId());
+    log.info("Enriching user ID={}", user.getId());
 
     Set<Role> userRoles = user.getRoles();
 
@@ -76,7 +76,7 @@ public class UserServiceImpl implements UserService {
 
 
   private User assignRole(User user, String roleName) {
-    log.debug("[UserServiceImpl.assignRole] Assigning role to user: user ID {}", user.getId());
+    log.debug("Assigning role to user: user ID {}", user.getId());
     Role role = roleService.getRoleByNameOrThrow(roleName);
     user.getRoles().add(role);
     return userPersistence.save(user);
@@ -87,7 +87,7 @@ public class UserServiceImpl implements UserService {
   public User findByUsernameOrThrow(String username) {
     Assert.hasText(username, "Username must not be empty");
 
-    log.debug("[UserServiceImpl.findByUsernameOrThrow] Finding user by username: {}", username);
+    log.debug("Finding user by username: {}", username);
 
     return userPersistence.findByUsername(username).orElseThrow(() -> {
       log.warn("User lookup failed for username: {}", username);
@@ -99,7 +99,7 @@ public class UserServiceImpl implements UserService {
 
   @Override
   public Optional<UserDto> findByEmail(String email) {
-    log.debug("[UserServiceImpl.findByEmail] Finding user by email: {}", email);
+    log.debug("Finding user by email: {}", email);
     Optional<User> userOpt = userPersistence.findByEmail(email);
     if (userOpt.isEmpty()) {
       log.warn("User not found for email={}", email);
@@ -111,7 +111,7 @@ public class UserServiceImpl implements UserService {
 
   @Override
   public UserDto createUserOrThrow(SignupRequest signupRequest) {
-    log.info("[UserServiceImpl.createUserOrThrow] Creating user with email={}",
+    log.info("Creating user with email={}",
         signupRequest.getEmail());
 
     Optional<User> userOpt = userPersistence.findByEmail(signupRequest.getEmail());
@@ -138,7 +138,7 @@ public class UserServiceImpl implements UserService {
 
   @Override
   public UserDto updateLoginMetadataOrThrow(Long userId, String ip, Instant loginAt) {
-    log.info("[UserServiceImpl.updateLoginMetadataOrThrow] Updating login metadata for user ID={}",
+    log.info("Updating login metadata for user ID={}",
         userId);
 
     User user = findByIdOrThrow(userId);
@@ -157,7 +157,7 @@ public class UserServiceImpl implements UserService {
   @Override
   public ServiceResponse<MyProfileResponse> getMyProfile() {
     AuthenticatedUser currentUser = AuthUtil.getCurrentUserOrThrow();
-    log.info("[UserServiceImpl.getMyProfile] finding user: user ID={}", currentUser.getId());
+    log.info("Fetching user self profile with user ID={}", currentUser.getId());
 
     User user = findByIdOrThrow(currentUser.getId());
     MyProfileResponse myProfileResponse = UserMapper.toMyProfileResponse(user);
@@ -168,13 +168,13 @@ public class UserServiceImpl implements UserService {
   @Override
   public ServiceResponse<UserProfileResponse> getUserProfileById(Long userId) {
     AuthenticatedUser currentUser = AuthUtil.getCurrentUserOrThrow();
-    log.info("[UserServiceImpl.getUserProfileById] finding user with id={}", userId);
+    log.info("Fetching user by id={}", userId);
 
     User user = findByIdOrThrow(currentUser.getId());
     UserProfileResponse userProfileResponse = UserMapper.toUserProfileResponse(user);
 
     enrichUserWithRoles(user, userProfileResponse);
-    log.info("User profile retrieval successful for id: {}", user.getId());
+    log.info("User profile retrieval successful for user ID={}", user.getId());
 
     return ResponseBuilder.successWithPayload("User profile fetched successfully",
         userProfileResponse);
@@ -186,7 +186,7 @@ public class UserServiceImpl implements UserService {
   public ServiceResponse<PictureUploadResponse> updateUserProfilePicture(MultipartFile file) {
     AuthenticatedUser currentUser = AuthUtil.getCurrentUserOrThrow();
     log.info(
-        "[UserServiceImpl.updateUserProfilePicture] profile picture upload request by user with id={}",
+        "Profile picture upload request by user with user ID={}",
         currentUser.getId());
 
     User user = findByIdOrThrow(currentUser.getId());
@@ -195,7 +195,7 @@ public class UserServiceImpl implements UserService {
 
     user.setPicture(filePath);
     user = userPersistence.save(user);
-    log.info("Updated profile picture for user with id={} path={}", user.getId(), filePath);
+    log.info("Updated profile picture for user with user ID={} path={}", user.getId(), filePath);
 
     PictureUploadResponse profilePictureUploadResponse =
         PictureUploadResponse.builder().picture(user.getPicture()).build();
@@ -214,7 +214,7 @@ public class UserServiceImpl implements UserService {
 
   @Override
   public void markEmailVerified(Long userId) {
-    log.info("[UserServiceImpl.markEmailVerified] updating email as verified for user ID={}",
+    log.info("Updating email as verified for user ID={}",
         userId);
     User user = findByIdOrThrow(userId);
     if (!user.isEmailVerified()) {
@@ -227,7 +227,7 @@ public class UserServiceImpl implements UserService {
   @Override
   public void markMobileNumberVerified(Long userId) {
     log.info(
-        "[UserServiceImpl.markMobileNumberVerified] updating mobile number as verified for user ID={}",
+        "Updating mobile number as verified for user ID={}",
         userId);
     User user = findByIdOrThrow(userId);
     if (!user.isMobileNumberVerified()) {
@@ -240,7 +240,7 @@ public class UserServiceImpl implements UserService {
 
   @Override
   public void updatePassword(Long userId, String newPassword) {
-    log.info("[UserServiceImpl.updatePassword] updating password for user ID={}", userId);
+    log.info("Updating password for user ID={}", userId);
     User user = findByIdOrThrow(userId);
     user.setPassword(passwordEncoder.encode(newPassword));
     user = userPersistence.save(user);

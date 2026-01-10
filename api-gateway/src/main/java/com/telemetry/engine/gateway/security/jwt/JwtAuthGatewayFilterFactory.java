@@ -8,6 +8,7 @@ import org.springframework.security.oauth2.server.resource.authentication.JwtAut
 import org.springframework.stereotype.Component;
 import com.telemetry.engine.common.constansts.ContextConstants;
 import lombok.extern.slf4j.Slf4j;
+import reactor.core.publisher.Mono;
 
 @Slf4j
 @Component
@@ -21,32 +22,38 @@ public class JwtAuthGatewayFilterFactory
   @Override
   public GatewayFilter apply(Config config) {
     log.debug("Validating request using jwt");
-    return (exchange, chain) -> exchange.getPrincipal().cast(JwtAuthenticationToken.class)
-        .flatMap(auth -> {
+    return (exchange, chain) -> {
+      Mono<Void> filterMono;
 
-          String userId = auth.getToken().getClaimAsString("userId") != null
-              ? auth.getToken().getClaimAsString("userId")
-              : "0";
-          
-          String clientIp =
-              Optional.ofNullable(exchange.getRequest().getHeaders().getFirst("X-Forwarded-For"))
-                  .orElseGet(() -> {
-                    if (exchange.getRequest().getRemoteAddress() != null) {
-                      return exchange.getRequest().getRemoteAddress().getAddress().getHostAddress();
-                    }
-                    return "unknown";
-                  });
-          
-          // propagating per-request information downstream
-          ServerHttpRequest mutatedRequest =
-              exchange.getRequest().mutate().header("X-User-Id", userId)
-                  .header("X-Client-Ip", clientIp).build();
+      filterMono = exchange.getPrincipal()
+          .cast(JwtAuthenticationToken.class)
+          .flatMap(auth -> {
 
-          return chain.filter(exchange.mutate().request(mutatedRequest).build())
-              .contextWrite(ctx -> ctx.put(ContextConstants.CONTEXT_USER_ID, userId)
-                  .put(ContextConstants.CONTEXT_CLIENT_IP, clientIp));
+            String userId = auth.getToken().getClaimAsString("userId") != null
+                ? auth.getToken().getClaimAsString("userId")
+                : "0";
 
-        }).switchIfEmpty(chain.filter(exchange));
+            String clientIp =
+                Optional.ofNullable(exchange.getRequest().getHeaders().getFirst("X-Forwarded-For"))
+                    .orElseGet(() -> exchange.getRequest().getRemoteAddress() != null
+                        ? exchange.getRequest().getRemoteAddress().getAddress().getHostAddress()
+                        : "unknown");
+
+            // propagating info downstream
+            ServerHttpRequest mutatedRequest = exchange.getRequest()
+                .mutate()
+                .header("X-User-Id", userId)
+                .header("X-Client-Ip", clientIp)
+                .build();
+
+            return chain.filter(exchange.mutate().request(mutatedRequest).build())
+                .contextWrite(ctx -> ctx
+                    .put(ContextConstants.CONTEXT_USER_ID, userId)
+                    .put(ContextConstants.CONTEXT_CLIENT_IP, clientIp));
+          });
+
+      return filterMono.switchIfEmpty(chain.filter(exchange));
+    };
   }
 
   public static class Config {

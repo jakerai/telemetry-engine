@@ -19,7 +19,7 @@ public class RoleServiceImpl implements RoleService {
 
   @Override
   public Role getRoleByNameOrThrow(String name) {
-    log.info("[RoleServiceImpl.getRoleByNameOrThrow] Fetching role by name={}", name);
+    log.info("Fetching role by name={}", name);
     return rolePersistence.findByName(name).orElseThrow(() -> {
       log.warn("Role not found: name={}", name);
       return new NotFoundException("Role not found");

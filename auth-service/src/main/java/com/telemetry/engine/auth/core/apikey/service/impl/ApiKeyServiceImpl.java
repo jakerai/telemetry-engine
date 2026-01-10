@@ -13,9 +13,9 @@ import com.telemetry.engine.auth.core.apikey.entity.ApiKey;
 import com.telemetry.engine.auth.core.apikey.mapper.ApiKeyMapper;
 import com.telemetry.engine.auth.core.apikey.persistence.ApiKeyPersistence;
 import com.telemetry.engine.auth.core.apikey.service.ApiKeyService;
-import com.telemetry.engine.auth.core.identity.util.AuthUtil;
 import com.telemetry.engine.auth.security.apikey.ApiKeyGenerator;
 import com.telemetry.engine.auth.security.model.AuthenticatedUser;
+import com.telemetry.engine.auth.util.AuthUtil;
 import com.telemetry.engine.common.context.RequestContext;
 import com.telemetry.engine.common.dto.request.ServiceRequest;
 import com.telemetry.engine.common.dto.response.ServiceResponse;
@@ -41,7 +41,7 @@ public class ApiKeyServiceImpl implements ApiKeyService {
     AuthenticatedUser currentUser = AuthUtil.getCurrentUserOrThrow();
     ApiKeyRegistrationRequest payload = serviceRequest.getPayload();
     log.info(
-        "[AuthServiceImpl.createApiKey] Creating API key from ip={} for asset ID={} by user ID={}",
+        "Creating API key from ip={} for asset ID={} by user ID={}",
         clientIp, payload.getAssetId(), currentUser.getId());
 
     String generatedApiKey = ApiKeyGenerator.generate();
@@ -66,7 +66,7 @@ public class ApiKeyServiceImpl implements ApiKeyService {
 
     String rawApiKey = serviceRequest.getPayload().getApiKey();
 
-    log.info("[AuthServiceImpl.validateApiKey] Validating API key from ip={}", clientIp);
+    log.info("Validating API key from ip={}", clientIp);
     String hashedKey = SecretUtils.hash(rawApiKey);
     Optional<ApiKey> apiKeyOpt =
         apiKeyPersistence.findByIdAndActiveTrueAndRevokedFalseAndDeletedFalse(hashedKey);
@@ -75,9 +75,8 @@ public class ApiKeyServiceImpl implements ApiKeyService {
 
     ApiKey apiKey = apiKeyOpt.get();
 
-
     ApiKeyValidationResponse responsePayload = ApiKeyValidationResponse.builder().valid(isValid)
-        .apiKeyHash(hashedKey).userId(apiKey.getId()).expiresAt(apiKey.getExpiresAt()).build();
+        .apiKeyHash(hashedKey).userId(apiKey.getUserId()).expiresAt(apiKey.getExpiresAt()).build();
 
     return ResponseBuilder.successWithPayload("API Key validation completed", responsePayload);
   }
@@ -97,7 +96,7 @@ public class ApiKeyServiceImpl implements ApiKeyService {
     String clientIp = RequestContext.getClientIp();
     AuthenticatedUser currentUser = AuthUtil.getCurrentUserOrThrow();
 
-    log.info("[AuthServiceImpl.revokeApiKey] Revoking API key with ID={} for user ID from ip={}",
+    log.info("Revoking API key with ID={} for user ID from ip={}",
         id, currentUser.getId(), clientIp);
 
 
@@ -117,7 +116,7 @@ public class ApiKeyServiceImpl implements ApiKeyService {
     String clientIp = RequestContext.getClientIp();
     AuthenticatedUser currentUser = AuthUtil.getCurrentUserOrThrow();
 
-    log.info("[AuthServiceImpl.revokeApiKey] Revoking API key with ID={} for user ID from ip={}",
+    log.info("Revoking API key with ID={} for user ID from ip={}",
         id, currentUser.getId(), clientIp);
     ApiKey apiKey = apiKeyPersistence.findByIdAndActiveTrueAndRevokedFalseAndDeletedFalse(id)
         .orElseThrow(() -> new NotFoundException("API key not found or already revoked: id=" + id));

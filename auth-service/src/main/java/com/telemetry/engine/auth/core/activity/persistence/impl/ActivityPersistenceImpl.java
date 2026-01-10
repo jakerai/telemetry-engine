@@ -23,7 +23,7 @@ public class ActivityPersistenceImpl implements ActivityPersistence {
     try {
       return activityRepository.save(activity);
     } catch (DataAccessException ex) {
-      log.error("[ActivityLogPersistenceImpl.save] DB error while saving activityLog: user ID={}",
+      log.error("DB error while saving activity: user ID={}",
           activity.getUserId(), ex);
       throw new DataPersistenceException("Failed to save activity");
     }

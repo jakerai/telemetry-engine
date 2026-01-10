@@ -27,7 +27,7 @@ public class TokenServiceImpl implements TokenService {
   public TokenDto storeTokenOrThrow(Long userId, String value, TokenType tokenType,
       Instant expiresAt) {
     String hashedToken = SecretUtils.hash(value);
-    log.info("[TokenServiceImpl.storeTokenOrThrow] Saving token for userId={}", userId);
+    log.info("Saving token for userId={}", userId);
 
     Token token = Token.builder().userId(userId).value(hashedToken).expiresAt(expiresAt)
         .type(tokenType).build();
@@ -35,14 +35,14 @@ public class TokenServiceImpl implements TokenService {
       token = tokenPersistence.save(token);
       return TokenMapper.toTokenDto(token);
     } catch (Exception ex) {
-      log.error("[TokenServiceImpl.storeTokenOrThrow] Error while saving token for userId={}", userId, ex);
+      log.error("Error while saving token for userId={}", userId, ex);
       throw new DataPersistenceException("Failed to save Token");
     }
   }
 
   @Override
   public void revokeTokenById(Long tokenId) {
-    log.info("[TokenServiceImpl.revokeTokenById] Revoking token with tokenId={}", tokenId);
+    log.info("Revoking token with tokenId={}", tokenId);
 
     Token token = tokenPersistence.findById(tokenId).orElse(null);
 
@@ -67,7 +67,7 @@ public class TokenServiceImpl implements TokenService {
   @Override
   public void revokeTokenByValue(String value) {
     String hashedToken = SecretUtils.hash(value);
-    log.info("[TokenServiceImpl.revokeTokenByValue] Revoking token with value={}", hashedToken);
+    log.info("Revoking token with value={}", hashedToken);
     
     Token token = tokenPersistence.findByValue(hashedToken).orElse(null);
 
@@ -92,7 +92,7 @@ public class TokenServiceImpl implements TokenService {
   @Override
   public void validateTokenOrThrow(String value) {
     String hashedToken = SecretUtils.hash(value);
-    log.info("[TokenServiceImpl.validateTokenOrThrow] validating token with value={}", hashedToken);
+    log.info("Validating token with value={}", hashedToken);
     Token token = tokenPersistence.findByValue(hashedToken)
         .orElseThrow(() -> {
             log.debug("Token not found={}", hashedToken);

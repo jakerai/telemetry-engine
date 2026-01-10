@@ -33,6 +33,7 @@ public class IngestionServiceImpl implements IngestionService {
     return Mono.deferContextual(ctx -> {
 
       Long userId = ctx.get(ContextConstants.CONTEXT_USER_ID);
+      log.info("Retrieved user ID={} from context",userId);
       String traceId = RequestContext.getTraceId();
      
       CircuitBreaker cb = cbManager.getOrCreate("kafkaIngestCB");

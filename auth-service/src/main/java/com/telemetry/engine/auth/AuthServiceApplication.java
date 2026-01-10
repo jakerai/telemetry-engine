@@ -7,8 +7,8 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.data.domain.AuditorAware;
 import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
 import org.springframework.scheduling.annotation.EnableScheduling;
-import com.telemetry.engine.auth.core.identity.util.AuthUtil;
 import com.telemetry.engine.auth.security.model.AuthenticatedUser;
+import com.telemetry.engine.auth.util.AuthUtil;
 import com.telemetry.engine.common.exception.UnauthorizedException;
 
 @SpringBootApplication
@@ -28,7 +28,7 @@ public class AuthServiceApplication {
    * <p>
    * This is used to automatically fill the @CreatedBy and @LastModifiedBy fields in entities. It
    * fetches the ID of the currently authenticated user from the security context using
-   * {@link com.rental.app.security.auth.util.AuthUtil#getCurrentUserOptional()}.
+   * {@link com.telemetry.engine.auth.util.rental.app.security.auth.util.AuthUtil#getCurrentUserOptional()}.
    * </p>
    * 
    * @return The current user ID, which will be automatically assigned to @CreatedBy/@LastModifiedBy

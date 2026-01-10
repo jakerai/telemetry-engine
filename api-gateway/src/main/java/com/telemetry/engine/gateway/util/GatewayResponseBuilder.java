@@ -10,8 +10,8 @@ import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Mono;
 
 @Slf4j
-public class GatewayResponse {
-  private GatewayResponse() {}
+public class GatewayResponseBuilder {
+  private GatewayResponseBuilder() {}
 
   public static Mono<Void> writeErrorResponse(ServerWebExchange exchange, HttpStatus status,
       String message, ObjectMapper objectMapper) {

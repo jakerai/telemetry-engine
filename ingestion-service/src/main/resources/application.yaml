@@ -5,6 +5,8 @@ server:
 spring:
   application:
     name: ingestion-service
+  jackson:
+    default-property-inclusion: non_null
   cloud:
     config:
       enabled: false

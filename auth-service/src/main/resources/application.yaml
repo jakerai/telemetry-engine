@@ -44,7 +44,7 @@ app:
       key-source: db # db for database, aws-secrets for AWS secret manager
       rotation:
         check-interval-ms: 60000 # in milliseconds
-        validity-seconds: 600 # in seconds
+        validity-seconds: 3000 # in seconds
         rotate-before-seconds: 30 # in seconds
       rsa:
         key-size: 2048

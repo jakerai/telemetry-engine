@@ -32,7 +32,7 @@ public class AwsJwtKeyStore implements JwtKeyStore {
   private JwtKeys cache;
 
   private void reloadCache() {
-    log.info("[AwsJwtKeyStore.reloadCache] Fetching keys from AWS secrets");
+    log.info("Fetching keys from AWS secrets");
     try {
       GetSecretValueResponse response =
           client.getSecretValue(GetSecretValueRequest.builder().secretId(SECRET_NAME).build());
@@ -54,7 +54,7 @@ public class AwsJwtKeyStore implements JwtKeyStore {
   }
 
   private void saveCache() {
-    log.info("[AwsJwtKeyStore.saveCache] Writing to AWS secrets");
+    log.info("Writing to AWS secrets");
     try {
       String payload = mapper.writeValueAsString(cache);
       try {
@@ -72,14 +72,14 @@ public class AwsJwtKeyStore implements JwtKeyStore {
 
   @Override
   public Optional<JwtKeys> findKeys() {
-    log.info("[AwsJwtKeyStore.findKeys] Fetching keys");
+    log.info("Fetching keys");
     reloadCache();
     return Optional.ofNullable(cache);
   }
 
   @Override
   public void saveKeys(JwtKeys keys) {
-    log.info("[AwsJwtKeyStore.saveKeys] Saving keys");
+    log.info("Saving keys");
     cache = keys;
     saveCache();
   }
@@ -114,7 +114,7 @@ public class AwsJwtKeyStore implements JwtKeyStore {
 
       client.putSecretValue(putRequest);
 
-      log.info("JWT keys rotated successfully in AWS Secrets Manager.");
+      log.info("JWT keys rotated successfully in AWS Secrets Manager");
       return true;
 
     } catch (ResourceExistsException e) {

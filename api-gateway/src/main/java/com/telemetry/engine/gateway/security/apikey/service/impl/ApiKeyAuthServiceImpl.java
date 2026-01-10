@@ -31,11 +31,11 @@ public class ApiKeyAuthServiceImpl implements ApiKeyAuthService {
     String apiKeyHash = SecretUtils.hash(apiKey);
 
     return authCache.get(apiKeyHash).flatMap(meta -> {
-      
+
       if (meta.getExpiresAt() != null && Instant.now().isAfter(meta.getExpiresAt())) {
         // Key expired, invalidate reactively
-        log.info("API key {} expired at {}",
-            SecretUtils.maskSensitiveData(apiKeyHash), meta.getExpiresAt());
+        log.info("API key {} expired at {}", SecretUtils.maskSensitiveData(apiKeyHash),
+            meta.getExpiresAt());
         return authCache.invalidate(apiKeyHash).then(Mono.<ApiKeyMeta>empty());
       }
 
@@ -53,9 +53,8 @@ public class ApiKeyAuthServiceImpl implements ApiKeyAuthService {
           log.info("AuthService did not return any data as the key is invalid");
           return Mono.empty();
         }
-        // Save in cache before returning
-        log.info("AuthService returned data={}. Saving the data in cache",
-             fetchedMeta);
+        // Saving in cache before returning
+        log.info("AuthService returned data={}. Saving the data in cache", fetchedMeta);
         return authCache.put(apiKeyHash, fetchedMeta).thenReturn(fetchedMeta);
       });
     }));

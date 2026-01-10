@@ -24,7 +24,7 @@ public class TokenPersistenceImpl implements TokenPersistence {
     try {
       return tokenRepository.save(token);
     } catch (DataAccessException ex) {
-      log.error("[TokenPersistenceImpl.save] DB error while saving token: user ID={}",
+      log.error("DB error while saving token: user ID={}",
           token.getUserId(), ex);
       throw new DataPersistenceException("Failed to save token");
     }
@@ -37,7 +37,7 @@ public class TokenPersistenceImpl implements TokenPersistence {
     try {
       return tokenRepository.findById(tokenId);
     } catch (DataAccessException ex) {
-      log.error("[TokenPersistenceImpl.findById] DB error while fetching token: tokenId={}",
+      log.error("DB error while fetching token: tokenId={}",
           tokenId, ex);
       throw new DataPersistenceException("Failed to fetch token");
     }
@@ -51,7 +51,7 @@ public class TokenPersistenceImpl implements TokenPersistence {
 
       return tokenRepository.findByValue(value);
     } catch (DataAccessException ex) {
-      log.error("[TokenPersistenceImpl.findByValue] DB error while fetching token: value={}", value,
+      log.error("DB error while fetching token: value={}", value,
           ex);
       throw new DataPersistenceException("Failed to fetch token");
     }

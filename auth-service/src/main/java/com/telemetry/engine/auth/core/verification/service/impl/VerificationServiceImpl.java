@@ -12,8 +12,8 @@ import com.telemetry.engine.auth.core.verification.enums.VerificationChannel;
 import com.telemetry.engine.auth.core.verification.enums.VerificationIntent;
 import com.telemetry.engine.auth.core.verification.persistence.VerificationPersistence;
 import com.telemetry.engine.auth.core.verification.service.VerificationService;
-import com.telemetry.engine.auth.core.verification.util.VerificationCodeGenerator;
 import com.telemetry.engine.auth.email.EmailService;
+import com.telemetry.engine.auth.util.VerificationCodeGenerator;
 import com.telemetry.engine.common.exception.InvalidCodeException;
 import com.telemetry.engine.common.exception.NotFoundException;
 import com.telemetry.engine.common.exception.TooManyAttemptsException;
@@ -34,7 +34,7 @@ public class VerificationServiceImpl implements VerificationService {
   @Override
   public void sendVerification(UserDto userDto, VerificationIntent intent,
       VerificationChannel channel) {
-    log.info("[VerificationServiceImpl.sendVerification] Sending for {} verification", channel);
+    log.info("Sending for {} verification", channel);
 
     String target = resolveTarget(userDto, intent, channel);
 
@@ -77,7 +77,7 @@ public class VerificationServiceImpl implements VerificationService {
 
   @Override
   public void verifyCode(Long userId, String code) {
-    log.info("[VerificationServiceImpl.verifyCode] Verifying code for user ID={}", userId);
+    log.info("Verifying code for user ID={}", userId);
     String codeHash = SecretUtils.hash(code);
 
     Verification verification =
@@ -111,7 +111,7 @@ public class VerificationServiceImpl implements VerificationService {
 
   private void incrementAttempts(Verification verification) {
     log.info(
-        "[VerificationServiceImpl.incrementAttempts] Incrementing verification attempts count for user ID={}",
+        "Incrementing verification attempts count for user ID={}",
         verification.getUserId());
 
     verification.setVerificationAttemptCount(verification.getVerificationAttemptCount() + 1);
@@ -121,7 +121,7 @@ public class VerificationServiceImpl implements VerificationService {
   private Verification createVerificationRecord(Long userId, String code,
       VerificationChannel channel, VerificationIntent intent, String target, Long expiresInMins) {
     log.info(
-        "[VerificationServiceImpl.createVerificationRecord] Creating {} verification record for user ID={}",
+        "Creating {} verification record for user ID={}",
         intent, userId);
 
     Verification verification = Verification.builder().userId(userId).channel(channel)
@@ -134,7 +134,7 @@ public class VerificationServiceImpl implements VerificationService {
 
   private void sendMobileNumberVerification(String code, String mobileNumber) {
     log.info(
-        "[VerificationServiceImpl.sendMobileNumberVerification] Sending verification code to mobile number={}",
+        "Sending verification code to mobile number={}",
         mobileNumber);
     // verificationService.create(user.getId(), VerificationChannel.PHONE,
     // VerificationIntent.SIGNUP, user.getPhone(), otp, Duration.ofMinutes(10));
@@ -145,7 +145,7 @@ public class VerificationServiceImpl implements VerificationService {
   private void sendPasswordResetEmail(String code, String receiverVerifiedEmail,
       String receiverFirstName) {
     log.info(
-        "[VerificationServiceImpl.sendPasswordResetEmail] Sending password reset email to email={}",
+        "Sending password reset email to email={}",
         receiverVerifiedEmail);
 
     String verificationLink = "http://mydomain/verify?code=" + code;
@@ -156,7 +156,7 @@ public class VerificationServiceImpl implements VerificationService {
   }
 
   private void sendSignupEmail(String code, String receiverEmail, String receiverFirstName) {
-    log.info("[VerificationServiceImpl.sendSignupEmail] Sending signup verification email to ={}",
+    log.info("Sending signup verification email to ={}",
         receiverEmail);
 
     String verificationLink = "http://mydomain/verify?code=" + code;
@@ -169,7 +169,7 @@ public class VerificationServiceImpl implements VerificationService {
   private void sendChangeEmailVerification(String code, String receiverNewEmail,
       String receiverFirstName) {
     log.info(
-        "[VerificationServiceImpl.sendChangeEmailVerification] Sending email change verification to ={}",
+        "Sending email change verification to ={}",
         receiverNewEmail);
 
     String verificationLink = "http://mydomain/verify?code=" + code;
@@ -184,7 +184,7 @@ public class VerificationServiceImpl implements VerificationService {
       VerificationChannel channel) {
 
     log.info(
-        "[VerificationServiceImpl.resolveTarget] Resolving target for {} verification for userId={}",
+        "Resolving target for {} verification for userId={}",
         intent, userDto.getId());
 
     return switch (intent) {
@@ -205,7 +205,7 @@ public class VerificationServiceImpl implements VerificationService {
   private void sendEmailVerification(String code, VerificationIntent intent, String email,
       String firstName) {
     log.info(
-        "[VerificationServiceImpl.sendEmailVerification] Sending email for {} verification for email={}",
+        "Sending email for {} verification for email={}",
         intent, email);
 
     switch (intent) {

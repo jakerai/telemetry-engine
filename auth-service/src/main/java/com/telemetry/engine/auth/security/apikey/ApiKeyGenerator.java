@@ -11,7 +11,7 @@ public class ApiKeyGenerator {
    * @return
    */
   public static final String generate() {
-    log.info("[ApiKeyGenerator.generate] Generating API key");
+    log.info("Generating API key");
     return "sk_" + UUID.randomUUID().toString().replace("-", "")
         + UUID.randomUUID().toString().replace("-", "");
   }

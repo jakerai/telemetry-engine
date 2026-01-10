@@ -22,7 +22,6 @@ import com.telemetry.engine.auth.core.identity.dto.request.SignupRequest;
 import com.telemetry.engine.auth.core.identity.dto.response.LoginResponse;
 import com.telemetry.engine.auth.core.identity.dto.response.RefreshTokenResponse;
 import com.telemetry.engine.auth.core.identity.service.IdentityService;
-import com.telemetry.engine.auth.core.identity.util.AuthUtil;
 import com.telemetry.engine.auth.core.token.dto.TokenDto;
 import com.telemetry.engine.auth.core.token.service.TokenService;
 import com.telemetry.engine.auth.core.user.dto.UserDto;
@@ -35,6 +34,7 @@ import com.telemetry.engine.auth.security.jwt.enums.TokenType;
 import com.telemetry.engine.auth.security.jwt.service.JwtService;
 import com.telemetry.engine.auth.security.model.AuthenticatedUser;
 import com.telemetry.engine.auth.security.model.JwtToken;
+import com.telemetry.engine.auth.util.AuthUtil;
 import com.telemetry.engine.common.context.RequestContext;
 import com.telemetry.engine.common.dto.request.ServiceRequest;
 import com.telemetry.engine.common.dto.response.ServiceResponse;
@@ -59,7 +59,7 @@ public class IdentityServiceImpl implements IdentityService {
 
 
   private AuthenticatedUser authenticateUser(String username, String password) {
-    log.info("[AuthServiceImpl.authenticateUser] authenticating user: username={}", username);
+    log.info("Authenticating user with username={}", username);
     try {
       AuthenticationManager authenticationManager =
           authenticationConfiguration.getAuthenticationManager();
@@ -91,7 +91,7 @@ public class IdentityServiceImpl implements IdentityService {
 
     SignupRequest signupDto = serviceRequest.getPayload();
 
-    log.info("[AuthServiceImpl.signup] New user signup for email={} from ip={}",
+    log.info("New user signup for email={} from ip={}",
         signupDto.getEmail(), clientIp);
 
     UserDto userDto = userService.createUserOrThrow(signupDto);
@@ -112,7 +112,7 @@ public class IdentityServiceImpl implements IdentityService {
     LoginRequest loginRequest = serviceRequest.getPayload();
     String clientIp = RequestContext.getClientIp();
 
-    log.info("[AuthServiceImpl.login] Login request for email={} from ip={}",
+    log.info("Login request for email={} from ip={}",
         loginRequest.getEmail(), clientIp);
 
     AuthenticatedUser user = authenticateUser(loginRequest.getEmail(), loginRequest.getPassword());
@@ -144,7 +144,7 @@ public class IdentityServiceImpl implements IdentityService {
     AuthenticatedUser currentUser = AuthUtil.getCurrentUserOrThrow();
     String clientIp = RequestContext.getClientIp();
     Long refreshTokenId = RequestContext.getRefreshTokenId();
-    log.info("[AuthServiceImpl.logout] Logout request for user ID={} from ip={}",
+    log.info("Logout request for user ID={} from ip={}",
         currentUser.getId(), clientIp);
 
     tokenService.revokeTokenById(refreshTokenId);
@@ -160,7 +160,7 @@ public class IdentityServiceImpl implements IdentityService {
 
     String clientIp = RequestContext.getClientIp();
     AuthenticatedUser currentUser = AuthUtil.getCurrentUserOrThrow();
-    log.info("[AuthServiceImpl.refreshToken] New refresh token request by user ID= {} from ip={}",
+    log.info("New refresh token request by user ID= {} from ip={}",
         currentUser.getId(), clientIp);
     Jwt jwt = currentUser.getCurrentJwt();
 
@@ -214,7 +214,7 @@ public class IdentityServiceImpl implements IdentityService {
 
     String email = payload.getEmail().trim().toLowerCase();
 
-    log.info("[AuthServiceImpl.forgotPassword] Request from ip={} for email={}", clientIp, email);
+    log.info("Request from ip={} for email={}", clientIp, email);
 
     Optional<UserDto> userDtoOpt = userService.findByEmail(email);
 
@@ -242,7 +242,7 @@ public class IdentityServiceImpl implements IdentityService {
   public ServiceResponse<?> resetPassword(ServiceRequest<ResetPasswordRequest> serviceRequest) {
 
     ResetPasswordRequest payload = serviceRequest.getPayload();
-    log.info("[AuthServiceImpl.resetPassword] Password reset attempt for email={}",
+    log.info("Password reset attempt for email={}",
         payload.getEmail());
 
     // Finding user
@@ -258,7 +258,7 @@ public class IdentityServiceImpl implements IdentityService {
     // Updating password
     userService.updatePassword(userDto.getId(), payload.getNewPassword());
 
-    log.info("[AuthServiceImpl.resetPassword] Password reset successful for userId={}",
+    log.info("Password reset successful for userId={}",
         userDto.getId());
 
     return ResponseBuilder.success("Password reset successfully");

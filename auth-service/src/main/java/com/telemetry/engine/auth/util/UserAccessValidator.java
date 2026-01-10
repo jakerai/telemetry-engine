@@ -1,4 +1,4 @@
-package com.telemetry.engine.auth.core.identity.util;
+package com.telemetry.engine.auth.util;
 
 import java.util.Arrays;
 import java.util.Set;
@@ -20,7 +20,7 @@ public final class UserAccessValidator {
   public static void validateUserAccess(String... allowedRoles) {
     AuthenticatedUser authenticatedUser = AuthUtil.getCurrentUserOrThrow();
     log.debug(
-        "[AuthValidationUtil.validateUserAccess] Validating roles for user ID={}: allowedRoles={}, userRoles={}",
+        "Validating roles for user ID={}: allowedRoles={}, userRoles={}",
         authenticatedUser.getId(), Arrays.toString(allowedRoles),
         authenticatedUser.getAuthorities());
 

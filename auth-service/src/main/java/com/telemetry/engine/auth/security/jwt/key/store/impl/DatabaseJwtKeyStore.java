@@ -25,7 +25,7 @@ public class DatabaseJwtKeyStore implements JwtKeyStore {
 
   @Override
   public Optional<JwtKeys> findKeys() {
-    log.info("[DatabaseJwtKeyStore.findKeys] Fetching keys from DB");
+    log.info("Fetching keys from DB");
     String sql =
         "SELECT id, keys, version, created_at, created_by, modified_at, modified_by FROM jwt_keys LIMIT 1";
 
@@ -49,7 +49,7 @@ public class DatabaseJwtKeyStore implements JwtKeyStore {
   @Override
   @Transactional
   public void saveKeys(JwtKeys keys) {
-    log.info("[DatabaseJwtKeyStore.saveKeys] Saving/Updating keys");
+    log.info("Saving/Updating keys");
     String jsonKeys = toJson(keys.getKeys());
 
     String sql = """
@@ -71,7 +71,7 @@ public class DatabaseJwtKeyStore implements JwtKeyStore {
   @Override
   @Transactional
   public boolean rotateKeysAtomically(String expectedCurrentKid, JwtKeys newKeys) {
-    log.info("[DatabaseJwtKeyStore.rotateKeysAtomically] Attempting atomic rotation for kid: {}",
+    log.info("Attempting atomic rotation for kid={}",
         expectedCurrentKid);
 
     String jsonNewKeys = toJson(newKeys.getKeys());

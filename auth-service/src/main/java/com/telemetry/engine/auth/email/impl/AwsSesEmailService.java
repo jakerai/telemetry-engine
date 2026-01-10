@@ -42,7 +42,7 @@ public class AwsSesEmailService implements EmailService {
   public void sendEmail(List<String> to, List<String> cc, List<String> bcc, String subject,
       String body, Boolean isHtml, Map<String, byte[]> attachments, Map<String, String> headers) {
     log.info(
-        "[AwsSesEmailService.sendEmail] Sending email: to={} cc={} bcc={} subject='{}' isHtml={} attachments={} headers={}",
+        "Sending email: to={} cc={} bcc={} subject='{}' isHtml={} attachments={} headers={}",
         to, cc, bcc, subject, isHtml, attachments != null ? attachments.keySet() : null, headers);
 
     try {
@@ -60,7 +60,7 @@ public class AwsSesEmailService implements EmailService {
   private void sendSimpleEmail(List<String> to, List<String> cc, List<String> bcc, String subject,
       String body, Boolean isHtml) {
     log.info(
-        "[AwsSesEmailService.sendSimpleEmail] Sending email: to={} cc={} bcc={} subject='{}' isHtml={}",
+        "Sending email: to={} cc={} bcc={} subject='{}' isHtml={}",
         to, cc, bcc, subject, isHtml);
 
     Destination destination =
@@ -85,7 +85,7 @@ public class AwsSesEmailService implements EmailService {
       String subject, String body, Boolean isHtml, Map<String, byte[]> attachments)
       throws MessagingException {
     log.info(
-        "[AwsSesEmailService.sendEmailWithAttachments] Sending email with attachments: to={} cc={} bcc={} subject='{}' isHtml={} attachmentNames={}",
+        "Sending email with attachments: to={} cc={} bcc={} subject='{}' isHtml={} attachmentNames={}",
         to, cc, bcc, subject, isHtml, attachments != null ? attachments.keySet() : null);
 
 

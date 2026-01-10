@@ -1,4 +1,4 @@
-package com.telemetry.engine.auth.core.verification.util;
+package com.telemetry.engine.auth.util;
 
 import java.security.SecureRandom;
 import com.telemetry.engine.auth.core.verification.enums.VerificationChannel;

@@ -16,25 +16,24 @@ public class IngestionContextFilter implements WebFilter {
 
   @Override
   public Mono<Void> filter(ServerWebExchange exchange, WebFilterChain chain) {
- 
-    String userId = Optional.ofNullable(exchange.getRequest().getHeaders().getFirst("X-User-Id"))
-            .orElse("0L");
-    String requestId = Optional.ofNullable(exchange.getRequest().getHeaders().getFirst("X-Request-Id"))
+
+    Long userId = Optional.ofNullable(exchange.getRequest().getHeaders().getFirst("X-User-Id"))
+        .map(Long::valueOf).orElse(0L);
+    String requestId =
+        Optional.ofNullable(exchange.getRequest().getHeaders().getFirst("X-Request-Id"))
             .orElse(UUID.randomUUID().toString());
     String clientIp = exchange.getRequest().getRemoteAddress() != null
-            ? exchange.getRequest().getRemoteAddress().getAddress().getHostAddress()
-            : "unknown";
+        ? exchange.getRequest().getRemoteAddress().getAddress().getHostAddress()
+        : "unknown";
 
-    if ("anonymous".equals(userId)) {
-        log.warn("Missing X-User-Id header from ip={}", clientIp);
+    if (0L == userId) {
+      log.warn("Missing X-User-Id header from ip={}", clientIp);
     }
 
     return chain.filter(exchange)
-            .contextWrite(ctx -> ctx
-                    .put(ContextConstants.CONTEXT_USER_ID, userId)
-                    .put(ContextConstants.CONTEXT_REQUEST_ID, requestId)
-                    .put(ContextConstants.CONTEXT_CLIENT_IP, clientIp)
-            );
-}
-  
+        .contextWrite(ctx -> ctx.put(ContextConstants.CONTEXT_USER_ID, userId)
+            .put(ContextConstants.CONTEXT_REQUEST_ID, requestId)
+            .put(ContextConstants.CONTEXT_CLIENT_IP, clientIp));
+  }
+
 }

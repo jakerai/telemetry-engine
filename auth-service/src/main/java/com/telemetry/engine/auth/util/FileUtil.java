@@ -1,4 +1,4 @@
-package com.telemetry.engine.auth.core.file.util;
+package com.telemetry.engine.auth.util;
 
 import java.util.List;
 import java.util.UUID;
@@ -12,7 +12,7 @@ public class FileUtil {
   private static final long MAX_SIZE = 1 * 1024 * 1024; // 1MB
 
   public static void validateImage(MultipartFile image) {
-    log.info("[FileUtil.validateImage] Validating image");
+    log.info("Validating image");
     if (image == null || image.isEmpty()) {
       throw new FileUploadException("Image file is missing or empty");
     }
@@ -33,7 +33,7 @@ public class FileUtil {
   }
 
   public static String resolveOriginalFilename(MultipartFile file) {
-    log.info("[FileUtil.resolveOriginalFilename] Resolving original filename");
+    log.info("Resolving original filename");
     String originalFilename = file.getOriginalFilename();
 
     // Sanitizing filename (removing spaces, unsafe characters)

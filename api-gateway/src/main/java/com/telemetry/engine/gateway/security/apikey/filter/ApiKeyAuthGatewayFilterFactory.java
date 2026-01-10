@@ -11,7 +11,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.server.ServerWebExchange;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.telemetry.engine.gateway.security.apikey.service.ApiKeyAuthService;
-import com.telemetry.engine.gateway.util.GatewayResponse;
+import com.telemetry.engine.gateway.util.GatewayResponseBuilder;
 import reactor.core.publisher.Mono;
 
 @Component
@@ -39,7 +39,7 @@ public class ApiKeyAuthGatewayFilterFactory
       Mono<ServerWebExchange> mutatedExchangeMono;
 
       if (apiKey == null || apiKey.isBlank()) {
-        mutatedExchangeMono = Mono.just(exchange).flatMap(ex -> GatewayResponse
+        mutatedExchangeMono = Mono.just(exchange).flatMap(ex -> GatewayResponseBuilder
             .writeErrorResponse(exchange, HttpStatus.UNAUTHORIZED, "Missing API Key", objectMapper)
             .then(Mono.empty()));
       } else {
@@ -59,10 +59,10 @@ public class ApiKeyAuthGatewayFilterFactory
             return Mono.just(exchange.mutate().request(mutatedRequest).build());
           } else {
             // invalid key mark for 401
-            return GatewayResponse.writeErrorResponse(exchange, HttpStatus.UNAUTHORIZED,
+            return GatewayResponseBuilder.writeErrorResponse(exchange, HttpStatus.UNAUTHORIZED,
                 "Invalid API Key", objectMapper).then(Mono.empty());
           }
-        }).switchIfEmpty(Mono.defer(() -> GatewayResponse
+        }).switchIfEmpty(Mono.defer(() -> GatewayResponseBuilder
             .writeErrorResponse(exchange, HttpStatus.UNAUTHORIZED, "Invalid API Key", objectMapper)
             .then(Mono.empty())));
       }
