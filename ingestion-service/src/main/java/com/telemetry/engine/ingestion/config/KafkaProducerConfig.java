@@ -7,7 +7,6 @@ import org.apache.kafka.common.serialization.StringSerializer;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import com.telemetry.engine.ingestion.kafka.serializer.JsonSerializer;
 import reactor.kafka.sender.KafkaSender;
 import reactor.kafka.sender.SenderOptions;
 
@@ -30,19 +29,20 @@ public class KafkaProducerConfig {
   private String saslMechanism;
 
   @Bean
-  public KafkaSender<String, Object> kafkaSender() {
+  public KafkaSender<String, String> kafkaSender() {
     Map<String, Object> props = new HashMap<>();
     props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
     // Serializer for the message key (String -> bytes)
     props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
     // Serializer for the message value (Object -> JSON)
-    props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, JsonSerializer.class);
+    props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
 
 
     // wait up to 5ms to batch messages
     props.put(ProducerConfig.LINGER_MS_CONFIG, 5);
-    // Batch size in bytes (per partition) 128KB
-    props.put(ProducerConfig.BATCH_SIZE_CONFIG, 131072);
+    // Batch size in bytes (per partition) 512KB
+    props.put(ProducerConfig.BATCH_SIZE_CONFIG, 524288);
+    props.put(ProducerConfig.MAX_REQUEST_SIZE_CONFIG, 2097152); // 2MB limit default 1MB
     // Compress batches to reduce network usage and improve throughput
     props.put(ProducerConfig.COMPRESSION_TYPE_CONFIG, "lz4");
     // Leader must acknowledge, faster than waiting for all replicas
@@ -61,7 +61,7 @@ public class KafkaProducerConfig {
               + username + "\" password=\"" + password + "\";");
     }
 
-    SenderOptions<String, Object> senderOptions = SenderOptions.create(props);
+    SenderOptions<String, String> senderOptions = SenderOptions.create(props);
     return KafkaSender.create(senderOptions);
   }
 

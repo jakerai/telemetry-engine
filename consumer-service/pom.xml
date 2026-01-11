@@ -48,20 +48,75 @@
 			<artifactId>spring-cloud-starter-config</artifactId>
 		</dependency>
 		<dependency>
-			<groupId>org.springframework.kafka</groupId>
-			<artifactId>spring-kafka</artifactId>
-		</dependency>
-
-		<dependency>
-			<groupId>io.micrometer</groupId>
-			<artifactId>micrometer-registry-otlp</artifactId>
-			<scope>runtime</scope>
-		</dependency>
+            <groupId>io.projectreactor.kafka</groupId>
+            <artifactId>reactor-kafka</artifactId>
+        </dependency>
 		<dependency>
 			<groupId>org.projectlombok</groupId>
 			<artifactId>lombok</artifactId>
 			<optional>true</optional>
 		</dependency>
+		<dependency>
+		    <groupId>org.springframework.boot</groupId>
+		    <artifactId>spring-boot-starter-data-r2dbc</artifactId>
+        </dependency>
+		<dependency>
+		    <groupId>org.postgresql</groupId>
+		    <artifactId>r2dbc-postgresql</artifactId>
+		</dependency>
+		<dependency>
+		    <groupId>io.r2dbc</groupId>
+		    <artifactId>r2dbc-pool</artifactId>
+        </dependency>
+        <dependency>
+			<groupId>org.springframework.cloud</groupId>
+			<artifactId>spring-cloud-starter-circuitbreaker-reactor-resilience4j</artifactId>
+		</dependency>
+		<!-- 
+			Micrometer OTLP registry: 
+			- Allows Spring Boot (Micrometer) to export **metrics** to an OTLP endpoint (collector, Jaeger, Tempo, Honeycomb, etc.).
+			- Mainly for **metrics**, not traces.  
+			- Does NOT automatically propagate userId/requestId for logs.
+			-->
+		<dependency>
+			<groupId>io.micrometer</groupId>
+			<artifactId>micrometer-registry-otlp</artifactId>
+			<scope>runtime</scope>
+		</dependency>
+		
+		<!-- 
+			Micrometer Tracing Bridge for OpenTelemetry: 
+			- Bridges Micrometer’s **tracing API** to **OpenTelemetry**.
+			- Enables Spring Boot’s reactive/WebFlux/Kafka instrumentation to send spans via OpenTelemetry.
+			- Supports automatic **context propagation** in reactive chains (Mono/Flux), but you still need to map context to MDC manually if you want it in logs.
+			-->
+		<dependency>
+            <groupId>io.micrometer</groupId>
+            <artifactId>micrometer-tracing-bridge-otel</artifactId>
+        </dependency>
+        
+        <!-- 
+			OpenTelemetry OTLP Exporter:
+			- Sends **traces** (and optionally metrics) from your app to an **OTLP endpoint** (collector/Jaeger/Honeycomb).
+			- Works together with micrometer-tracing-bridge-otel.
+			- Does not handle MDC/logging by itself.
+			-->
+        <dependency>
+            <groupId>io.opentelemetry</groupId>
+            <artifactId>opentelemetry-exporter-otlp</artifactId>
+        </dependency>
+        <!-- 
+			Micrometer Context Propagation:
+			- Ensures **Reactor/async threads/Mono/Flux/Kafka** automatically carry the **reactive context** across threads.
+			- Helps you propagate `requestId`, `userId`, etc., without manually passing them everywhere.
+			- This is what allows you to **bridge Reactor context → MDC** easily.
+			- Combined with a small MDC bridge, it can automatically populate MDC for logging.
+			-->
+        <dependency>
+             <groupId>io.micrometer</groupId>
+             <artifactId>context-propagation</artifactId>
+        </dependency>
+		
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-test</artifactId>

@@ -9,8 +9,8 @@ import com.telemetry.engine.common.dto.request.ServiceRequest;
 import com.telemetry.engine.common.dto.response.ServiceResponse;
 import com.telemetry.engine.common.utils.ResponseBuilder;
 import com.telemetry.engine.ingestion.config.CircuitBreakerManager;
-import com.telemetry.engine.ingestion.dto.MessageRequest;
-import com.telemetry.engine.ingestion.kafka.IngestionProducer;
+import com.telemetry.engine.ingestion.dto.MessageEvent;
+import com.telemetry.engine.ingestion.producer.IngestionProducer;
 import com.telemetry.engine.ingestion.service.IngestionService;
 import io.github.resilience4j.circuitbreaker.CircuitBreaker;
 import lombok.RequiredArgsConstructor;
@@ -26,9 +26,9 @@ public class IngestionServiceImpl implements IngestionService {
   private final CircuitBreakerManager cbManager;
 
   @Override
-  public Mono<ServiceResponse<Void>> ingest(ServiceRequest<List<MessageRequest>> serviceRequest) {
+  public Mono<ServiceResponse<Void>> ingest(ServiceRequest<List<MessageEvent>> serviceRequest) {
     log.info("Ingesting data...");
-    List<MessageRequest> messages = serviceRequest.getPayload();
+    List<MessageEvent> messageEvents = serviceRequest.getPayload();
 
     return Mono.deferContextual(ctx -> {
 
@@ -38,7 +38,7 @@ public class IngestionServiceImpl implements IngestionService {
      
       CircuitBreaker cb = cbManager.getOrCreate("kafkaIngestCB");
 
-      return ingestionProducer.send(traceId, messages, cb)
+      return ingestionProducer.send(traceId, messageEvents, cb)
           .thenReturn(ResponseBuilder.<Void>success("Ingested successfully")).onErrorResume(e -> {
             log.error("Ingestion failed for user ID={}", userId, e);
             return Mono

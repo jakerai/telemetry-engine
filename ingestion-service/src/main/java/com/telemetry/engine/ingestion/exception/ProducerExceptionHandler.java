@@ -17,7 +17,7 @@ import reactor.core.publisher.Mono;
  */
 
 @RestControllerAdvice
-public class GlobalExceptionHandlerController {
+public class ProducerExceptionHandler {
 
     
  // Handles body parsing / deserialization errors

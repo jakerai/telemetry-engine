@@ -21,21 +21,18 @@ kafka:
   password: ${KAFKA_PASSWORD:} # empty by default
   security:
     # Security protocol to use
-    # PLAINTEXT       -> no auth (dev/local)
-    # SASL_PLAINTEXT  -> SASL authentication over plaintext
-    # SASL_SSL        -> SASL authentication over SSL/TLS
-    # SSL             -> SSL/TLS encryption without SASL auth
+    # PLAINTEXT       - no auth (dev/local)
+    # SASL_PLAINTEXT  - SASL authentication over plaintext
+    # SASL_SSL        - SASL authentication over SSL/TLS
+    # SSL             - SSL/TLS encryption without SASL auth
     protocol: ${KAFKA_SECURITY_PROTOCOL:PLAINTEXT} # default PLAINTEXT
     sasl:
       # SASL mechanism (used only if protocol is SASL_PLAINTEXT or SASL_SSL)
-      # Common options:
-      # SCRAM-SHA-256
-      # SCRAM-SHA-512
-      # PLAIN
-      # GSSAPI (Kerberos)
-      mechanism: ${KAFKA_SASL_MECHANISM:} # PLAIN by default
-
-    
+      mechanism: ${KAFKA_SASL_MECHANISM:} # PLAIN by default (Options: SCRAM-SHA-256, SCRAM-SHA-512, PLAIN, GSSAPI (Kerberos))
+  group:
+    id: ${KAFKA_GROUP_ID:consumer-group-1} # Kafka consumer group
+  topic: ingestion-topic
+   
 management:
   endpoints:
     web:

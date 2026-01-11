@@ -9,17 +9,16 @@ import lombok.Setter;
 @Getter
 @Setter
 @Builder
-public class MessageRequest {
+public class MessageEvent {
 
   @Builder.Default
   private String requestId = RequestContext.getTraceId();
-
-  private Long userId;
-
-  private String clientIp;
-
-  private Instant timestamp;
-
-  private Object payload;
+  private String assetId; 
+  private double latitude;
+  private double longitude;
+  private double speed;
+  private double heading;
+  @Builder.Default
+  private Instant processedAt = Instant.now();
 
 }

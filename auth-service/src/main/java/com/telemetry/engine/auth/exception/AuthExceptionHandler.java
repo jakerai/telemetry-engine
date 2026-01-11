@@ -31,7 +31,7 @@ import com.telemetry.engine.common.exception.UnauthorizedException;
  */
 
 @RestControllerAdvice
-public class GlobalExceptionHandlerController {
+public class AuthExceptionHandler {
 
   @ExceptionHandler(UnauthorizedException.class)
   public ResponseEntity<Object> handleUnauthorizedException(UnauthorizedException ex) {
