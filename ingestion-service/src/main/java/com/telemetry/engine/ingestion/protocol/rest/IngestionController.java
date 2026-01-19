@@ -1,4 +1,4 @@
-package com.telemetry.engine.ingestion.controller.v1;
+package com.telemetry.engine.ingestion.protocol.rest;
 
 import java.util.List;
 import org.springframework.http.MediaType;

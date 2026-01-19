@@ -17,13 +17,14 @@ public class ApiEndpointsConstants {
   private ApiEndpointsConstants() {}
 
 
-/**
- * To access from public Internet
- */
+  /**
+   * To access from public Internet
+   */
   public static final String[] ALL_PUBLIC_EXTERNAL_ENDPOINTS =
       {"/api/external/v1/auth/signup", "/api/external/v1/auth/login",
           "/api/external/v1/auth/refresh-token", "/api/external/v1/auth/forgot-password",
-          "/api/external/v1/auth/reset-password", "/api/v1/ingest", "/actuator/**"};
+          "/api/external/v1/auth/reset-password", "/api/v1/ingest", "/actuator/**", "/ws/v1/ingest",
+          "/com.telemetry.engine.ingestion.protocol.grpc.IngestionService/**"};
 
 
   private static final String[] INTERNAL_ONLY_ENDPOINTS =
@@ -46,7 +47,7 @@ public class ApiEndpointsConstants {
         ALL_PUBLIC_EXTERNAL_ENDPOINTS.length, INTERNAL_ONLY_ENDPOINTS.length);
   }
 
-  public static void main(String args []) {
-    System.out.println("internal="+ALL_PUBLIC_EXTERNAL_ENDPOINTS);
+  public static void main(String args[]) {
+    System.out.println("internal=" + ALL_PUBLIC_EXTERNAL_ENDPOINTS);
   }
 }

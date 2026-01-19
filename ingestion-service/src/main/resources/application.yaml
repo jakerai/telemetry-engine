@@ -2,6 +2,19 @@ server:
   port: 5001
   shutdown: graceful
   
+grpc:
+    server:
+      port: 9090
+      reflection-enabled: true
+      max-inbound-message-size: 20MB
+      keep-alive:
+        time: 5s
+        timeout: 20s
+        permit-without-calls: true
+        max-idle: 2m
+        max-age: 10m
+        max-age-grace: 30s
+  
 spring:
   application:
     name: ingestion-service

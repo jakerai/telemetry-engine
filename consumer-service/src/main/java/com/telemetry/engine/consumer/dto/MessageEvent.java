@@ -12,11 +12,12 @@ import lombok.ToString;
 @ToString
 public class MessageEvent {
 
-  private String assetId;
+  private Long assetId;
   private double latitude;
   private double longitude;
   private double speed;
   private double heading;
+  private Instant deviceTs;
   private Instant processedAt;
   private String requestId;
 

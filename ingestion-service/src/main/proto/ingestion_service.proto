@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+package com.telemetry.engine.ingestion.protocol.grpc;
+
+option java_package = "com.telemetry.engine.ingestion.protocol.grpc";
+option java_multiple_files = true;
+
+import "service_request.proto";
+import "service_response.proto";
+
+
+
+service IngestionService {
+  rpc ingest(ServiceRequest) returns (ServiceResponse);
+}

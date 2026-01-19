@@ -1,5 +1,7 @@
 server:
   port: 8080
+  http2:
+    enabled: true  # This allows the Gateway to understand the 'PRI' preface
 
 spring:
   application:
@@ -15,6 +17,12 @@ spring:
     config:
       enabled: false
     gateway:
+      httpclient:
+        # This ensures the Gateway talks to Ingestion Service via HTTP/2
+        protocol-config:
+          http2:
+            enabled: true
+            use-http2-0-with-prior-knowledge: true
       server:
         webflux:
           routes:
@@ -49,7 +57,24 @@ spring:
                   args:
                     name: apiKeyCircuitBreaker
                     fallbackUri: forward:/fallback/apikey
-               
+            # WebSocket Route
+            - id: websocket-route
+              uri: http://localhost:5001
+              predicates:
+                - Path=/ws/v1/ingest/**
+              filters:
+                - name: ApiKeyAuth
+                - PreserveHostHeader # Ensures headers aren't dropped
+              # WebSockets generally don't work well with CircuitBreakers 
+              # because they are long-lived, not request-response.
+
+            # gRPC Route
+            - id: grpc-route
+              uri: http://localhost:9090
+              predicates:
+                - Path=/com.telemetry.engine.ingestion.protocol.grpc.IngestionService/**
+              filters:
+                - name: ApiKeyAuth
 app:
   security:
     cache:

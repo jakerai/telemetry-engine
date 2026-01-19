@@ -13,11 +13,12 @@ public class MessageEvent {
 
   @Builder.Default
   private String requestId = RequestContext.getTraceId();
-  private String assetId; 
+  private Long assetId; 
   private double latitude;
   private double longitude;
   private double speed;
   private double heading;
+  private Instant deviceTs;
   @Builder.Default
   private Instant processedAt = Instant.now();
 

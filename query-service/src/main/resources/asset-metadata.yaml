@@ -1,0 +1,40 @@
+asset-metadata:
+  categories:
+    - code: VEHICLE
+      description: All vehicle related assets
+
+    - code: MOBILE
+      description: Mobile devices
+
+    - code: IOT
+      description: IoT and drone devices
+
+  types:
+    - code: CAR
+      category: VEHICLE
+      description: Car
+
+    - code: TRUCK
+      category: VEHICLE
+      description: Truck
+
+    - code: MOTORBIKE
+      category: VEHICLE
+      description: Motorbike
+
+    - code: BICYCLE
+      category: VEHICLE
+      description: Bicycle
+
+    - code: MOBILE_DEVICE
+      category: MOBILE
+      description: Mobile tracking device
+
+    - code: IOT_DEVICE
+      category: IOT
+      description: IoT device
+
+    - code: DRONE
+      category: IOT
+      description: Drone
+      
