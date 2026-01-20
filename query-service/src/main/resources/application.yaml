@@ -13,8 +13,11 @@ spring:
     pool:
       initial-size: 5
       max-size: 20
-
-      
+  redis:
+    host: localhost
+    port: 6379
+    password: Test321$$$
+    
 management:
   endpoints:
     web:

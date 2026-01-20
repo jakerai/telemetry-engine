@@ -11,10 +11,10 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 @GrpcService
 @RequiredArgsConstructor
-public class IngestionServiceGrpcImpl extends IngestionServiceGrpc.IngestionServiceImplBase {
+public class IngestionServiceGrpcImpl /*extends IngestionServiceGrpc.IngestionServiceImplBase*/ {
 
   private final IngestionService ingestionService;
-
+/*
   @Override
   public void ingest(ServiceRequest request, StreamObserver<ServiceResponse> responseObserver) {
 
@@ -78,6 +78,6 @@ public class IngestionServiceGrpcImpl extends IngestionServiceGrpc.IngestionServ
             .setStatus(status.getStatus())
             .setRequestId(status.getRequestId() == null ? "" : status.getRequestId()).build())
         .build();
-  }
+  }*/
 
 }

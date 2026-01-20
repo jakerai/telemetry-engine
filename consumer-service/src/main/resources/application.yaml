@@ -14,11 +14,13 @@ spring:
     pool:
       initial-size: 5
       max-size: 20
-
   # Optional, for schema initialization
   sql:
     init:
       mode: always
+
+redis:
+  uri: redis://:Test321$$$@localhost:6379    
 
 kafka:
   bootstrap:

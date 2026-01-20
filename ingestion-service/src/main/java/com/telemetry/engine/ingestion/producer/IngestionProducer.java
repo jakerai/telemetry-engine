@@ -4,7 +4,7 @@ import java.util.List;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.telemetry.engine.common.mapper.MapperUtil;
 import com.telemetry.engine.ingestion.dto.MessageEvent;
 import io.github.resilience4j.circuitbreaker.CircuitBreaker;
 import io.github.resilience4j.reactor.circuitbreaker.operator.CircuitBreakerOperator;
@@ -30,7 +30,7 @@ public class IngestionProducer {
   private static final int MAX_PARALLEL_BATCHES = 4;
 
   private final KafkaSender<String, String> kafkaSender; // JSON string messages
-  private final ObjectMapper objectMapper = new ObjectMapper();
+ 
 
   /**
    * Sends events in batches to Kafka. 
@@ -49,7 +49,7 @@ public class IngestionProducer {
   private Mono<Void> sendBatchAsJsonArray(List<MessageEvent> batch, String key, CircuitBreaker cb) {
     try {
       // Converting entire batch to JSON array string
-      String batchJson = objectMapper.writeValueAsString(batch);
+      String batchJson = MapperUtil.serializeToJson(batch);
 
       // Creating Kafka record
       ProducerRecord<String, String> record = new ProducerRecord<>(topic, key, batchJson);

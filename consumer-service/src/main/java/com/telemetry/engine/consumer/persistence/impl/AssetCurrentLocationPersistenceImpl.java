@@ -77,27 +77,31 @@ public class AssetCurrentLocationPersistenceImpl implements AssetCurrentLocation
    */
   @Override
   public Mono<Void> upsert(AssetCurrentLocation loc) {
-    String sql = """
+    String sql =
+        """
             INSERT INTO telemetry.asset_current_location
-            (asset_id, current_lat, current_lon, location, speed, heading, device_ts, processed_at)
-            VALUES ($1, $2, $3, point($3, $2), $4, $5, $6, $7)
+                (asset_id, current_lat, current_lon, location, h3_index, speed, heading, device_ts, processed_at)
+            VALUES ($1, $2, $3, ST_SetSRID(ST_MakePoint($3, $2), 4326)::geography, $4, $5, $6, $7, $8)
             ON CONFLICT (asset_id)
             DO UPDATE SET
                 current_lat  = EXCLUDED.current_lat,
                 current_lon  = EXCLUDED.current_lon,
                 location     = EXCLUDED.location,
+                h3_index     = EXCLUDED.h3_index,
                 speed        = EXCLUDED.speed,
                 heading      = EXCLUDED.heading,
                 device_ts    = EXCLUDED.device_ts,
                 processed_at = EXCLUDED.processed_at
             WHERE EXCLUDED.device_ts > asset_current_location.device_ts
-        """;
+            """;
 
     return databaseClient.sql(sql).bind("$1", loc.getAssetId()).bind("$2", loc.getCurrentLat())
-        .bind("$3", loc.getCurrentLon()).bind("$4", loc.getSpeed()).bind("$5", loc.getHeading())
-        .bind("$6", loc.getDeviceTs()) 
-        .bind("$7", loc.getProcessedAt()) // Process starting time by producer
-        .then();
+        .bind("$3", loc.getCurrentLon())
+        .bind("$4", loc.getH3Index() != null ? loc.getH3Index() : null)
+        .bind("$5", loc.getSpeed() != null ? loc.getSpeed() : null)
+        .bind("$6", loc.getHeading() != null ? loc.getHeading() : null)
+        .bind("$7", loc.getDeviceTs() != null ? loc.getDeviceTs() : null)
+        .bind("$8", loc.getProcessedAt() != null ? loc.getProcessedAt() : null).then();
   }
 
 }

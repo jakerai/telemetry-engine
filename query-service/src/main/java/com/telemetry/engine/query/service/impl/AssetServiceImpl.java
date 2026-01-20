@@ -5,11 +5,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.telemetry.engine.common.constansts.H3Constants;
 import com.telemetry.engine.common.dto.response.ServiceResponse;
 import com.telemetry.engine.common.geo.H3Service;
-import com.telemetry.engine.common.mapper.MapperService;
+import com.telemetry.engine.common.mapper.MapperUtil;
 import com.telemetry.engine.common.redis.RedisService;
 import com.telemetry.engine.query.dto.AssetLocationViewDto;
 import com.telemetry.engine.query.dto.NearbyAssetsRequest;
@@ -19,6 +18,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
+import tools.jackson.core.type.TypeReference;
 
 @Slf4j
 @Service
@@ -29,7 +30,7 @@ public class AssetServiceImpl implements AssetService {
   private final AssetCurrentLocationPersistence persistence;
   private final RedisService redisService;
   private final H3Service h3Service;
-  private final MapperService mapperService;
+ 
 
 
 
@@ -79,14 +80,16 @@ public class AssetServiceImpl implements AssetService {
         // fallback to DB
         return persistence
             .findNearby(req.getAssetType(), req.getLat(), req.getLon(), req.getRadiusMeters())
-            .map(dto -> mapperService.toMap(dto)).collectList();
+            .map(dto -> MapperUtil.toMap(dto)).collectList();
       }
       // fetching Redis hashes
-      return Flux.fromIterable(assetIds)
-          .flatMap(id -> redisService.getHash(H3Constants.KEY_ASSET + id).defaultIfEmpty(Map.of()))
+      return Flux
+          .fromIterable(assetIds).flatMap(id -> redisService
+              .getHash(H3Constants.KEY_ASSET + id, Object.class).defaultIfEmpty(Map.of()))
           .filter(map -> !map.isEmpty()).collectList();
     });
   }
+
 
   /**
    * Subscribe to real-time deltas from Redis
@@ -95,17 +98,22 @@ public class AssetServiceImpl implements AssetService {
 
     String centerH3 =
         h3Service.toH3CellAddress(req.getLat(), req.getLon(), H3Constants.H3_RESOLUTION_8);
+
     int ringSize = (int) Math.ceil(req.getRadiusMeters() / 1000.0);
 
     List<String> topics = h3Service.kRing(centerH3, ringSize).stream()
         .map(h -> H3Constants.STREAM + h).collect(Collectors.toList());
 
-    return Flux.fromIterable(topics).flatMap(redisService::subscribeToChannel).map(json -> {
-      Map<String, Object> map =
-          mapperService.deserializeFromJson(json, new TypeReference<Map<String, Object>>() {});
-      return map != null ? map : Map.of();
-    });
+    return Flux.fromIterable(topics)
+        .flatMap(redisService::subscribe) // or listen/subscribe depending on your RedisService
+        .publishOn(Schedulers.boundedElastic()) // offload CPU-bound JSON work
+        .map(json -> {
+            Map<String, Object> map = MapperUtil.deserializeFromJson(
+                    json, new TypeReference<Map<String, Object>>() {}); // correct overload
+            return map != null ? map : Map.of();
+        });
   }
+
 
   @Override
   public Flux<ServiceResponse<AssetLocationViewDto>> streamAssetCurrentLocation(Long assetId) {

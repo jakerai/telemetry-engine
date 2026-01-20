@@ -16,8 +16,8 @@ public class H3Service {
   }
 
   /* Convert lat/lon to H3 index */
-  public String toH3CellAddress(double lat, double lon, int resolution) {
-    return h3.latLngToCellAddress(lat, lon, resolution);
+  public long toH3CellAddress(double lat, double lon, int resolution) {
+    return h3.latLngToCell(lat, lon, resolution);
   }
 
   /* Get k-ring neighboring hexes */

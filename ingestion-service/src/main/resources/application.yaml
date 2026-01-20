@@ -25,7 +25,11 @@ spring:
       enabled: false
   lifecycle:
     timeout-per-shutdown-phase: 30s
-    
+  redis:
+    host: localhost
+    port: 6379
+    password: Test321$$$
+  
 kafka:
   bootstrap:
     # Kafka broker addresses (comma-separated for multiple brokers)

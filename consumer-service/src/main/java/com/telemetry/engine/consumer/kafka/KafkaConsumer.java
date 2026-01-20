@@ -19,7 +19,7 @@ import reactor.kafka.receiver.ReceiverRecord;
 @RequiredArgsConstructor
 public class KafkaConsumer {
 
-  private final KafkaReceiver<String, String> kafkaReceiver; // JSON array strings
+  private final KafkaReceiver<String, String> kafkaReceiver;
   private final Processor processor;
   private final CircuitBreakerManager circuitBreakerManager;
 

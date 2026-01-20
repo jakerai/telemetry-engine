@@ -11,7 +11,7 @@
 -- - Uses TimescaleDB for time-series
 -- - Uses PostGIS for geospatial data (GEOGRAPHY(Point,4326))
 -- - asset_current_location: upsert-ready using asset_id as UNIQUE PRIMARY KEY
--- - asset_location_event: hypertable, chunked daily, with compression
+-- - asset_location_history: hypertable, chunked daily, with compression
 -- - Indexes for fast lookups and GIS queries
 -- - modified_at triggers for audit
 -- - Fully compatible with reactive R2DBC + Kafka consumer + upsert design
@@ -90,6 +90,7 @@ CREATE TABLE IF NOT EXISTS telemetry.asset_current_location (
     current_lat DOUBLE PRECISION NOT NULL,
     current_lon DOUBLE PRECISION NOT NULL,
     location GEOGRAPHY(Point, 4326) NOT NULL,
+    h3_index BIGINT,
     speed DOUBLE PRECISION,
     heading DOUBLE PRECISION,
     device_ts TIMESTAMPTZ NOT NULL,
@@ -102,18 +103,21 @@ CREATE TABLE IF NOT EXISTS telemetry.asset_current_location (
 
 CREATE INDEX IF NOT EXISTS idx_asset_current_location_geo
     ON telemetry.asset_current_location USING GIST(location);
+CREATE INDEX IF NOT EXISTS idx_asset_current_location_h3_index
+    ON telemetry.asset_current_location(h3_index);
 CREATE INDEX IF NOT EXISTS idx_asset_current_location_device_ts
     ON telemetry.asset_current_location(device_ts);
 
 -- =======================================================
 -- 6. Asset Location Event (time-series)
 -- =======================================================
-CREATE TABLE IF NOT EXISTS telemetry.asset_location_event (
+CREATE TABLE IF NOT EXISTS telemetry.asset_location_history (
     device_ts TIMESTAMPTZ NOT NULL,
     asset_id BIGINT NOT NULL REFERENCES telemetry.asset(id) ON DELETE CASCADE,
     latitude DOUBLE PRECISION NOT NULL,
     longitude DOUBLE PRECISION NOT NULL,
     location GEOGRAPHY(Point, 4326) NOT NULL,
+    h3_index BIGINT,
     speed DOUBLE PRECISION,
     heading DOUBLE PRECISION,
     processed_at TIMESTAMPTZ
@@ -121,32 +125,33 @@ CREATE TABLE IF NOT EXISTS telemetry.asset_location_event (
 
 -- Convert to hypertable (TimescaleDB)
 SELECT create_hypertable(
-    'telemetry.asset_location_event',
+    'telemetry.asset_location_history',
     'device_ts',
     chunk_time_interval => INTERVAL '1 day',
     if_not_exists => TRUE
 );
 
-CREATE INDEX IF NOT EXISTS idx_asset_location_event_asset_id
-    ON telemetry.asset_location_event(asset_id);
-CREATE INDEX IF NOT EXISTS idx_asset_location_event_device_ts
-    ON telemetry.asset_location_event(device_ts DESC);
-CREATE INDEX IF NOT EXISTS idx_asset_location_event_geo
-    ON telemetry.asset_location_event USING GIST(location);
-
+CREATE INDEX IF NOT EXISTS idx_asset_location_history_asset_id
+    ON telemetry.asset_location_history(asset_id);
+CREATE INDEX IF NOT EXISTS idx_asset_location_history_device_ts
+    ON telemetry.asset_location_history(device_ts DESC);
+CREATE INDEX IF NOT EXISTS idx_asset_location_history_geo
+    ON telemetry.asset_location_history USING GIST(location);
+CREATE INDEX IF NOT EXISTS idx_asset_location_history_h3_index
+    ON telemetry.asset_location_history(h3_index);
 -- Compression policy for events older than 7 days
 DO $$
 BEGIN
     IF NOT EXISTS (
         SELECT 1 FROM timescaledb_information.compression_settings
-        WHERE hypertable_name = 'asset_location_event'
+        WHERE hypertable_name = 'asset_location_history'
     ) THEN
-        ALTER TABLE telemetry.asset_location_event SET (
+        ALTER TABLE telemetry.asset_location_history SET (
             timescaledb.compress,
             timescaledb.compress_segmentby = 'asset_id',
             timescaledb.compress_orderby = 'device_ts DESC'
         );
-        PERFORM add_compression_policy('telemetry.asset_location_event', INTERVAL '7 days');
+        PERFORM add_compression_policy('telemetry.asset_location_history', INTERVAL '7 days');
     END IF;
 END $$;
 

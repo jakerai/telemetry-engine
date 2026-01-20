@@ -9,6 +9,6 @@ public interface AssetLocationHistoryPersistence {
 
   Mono<AssetLocationHistory> save(AssetLocationHistory assetLocationEvent);
   
-  Flux<AssetLocationHistory> saveAll(List<AssetLocationHistory> assetLocationEvent);
+  Flux<AssetLocationHistory> insertAll(List<AssetLocationHistory> events);
   
 }
