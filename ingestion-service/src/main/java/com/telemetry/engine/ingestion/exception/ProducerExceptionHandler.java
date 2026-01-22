@@ -7,7 +7,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.bind.support.WebExchangeBindException;
 import org.springframework.web.server.ServerWebInputException;
 import org.springframework.web.server.UnsupportedMediaTypeStatusException;
-import com.telemetry.engine.common.dto.response.ResponseStatus;
+import com.telemetry.engine.common.context.RequestContext;
 import com.telemetry.engine.common.dto.response.ServiceResponse;
 import reactor.core.publisher.Mono;
 
@@ -19,49 +19,46 @@ import reactor.core.publisher.Mono;
 @RestControllerAdvice
 public class ProducerExceptionHandler {
 
-    
- // Handles body parsing / deserialization errors
+
+  /* Body parsing / deserialization errors */
   @ExceptionHandler(ServerWebInputException.class)
-  public Mono<ResponseEntity<ResponseStatus>> handleWebInputException(ServerWebInputException ex) {
-      ResponseStatus status = ResponseStatus.builder()
-              .success(false)
-              .message("Validation Failed")
-              .status(ex.getStatusCode().value())
-              .errors(ex.getReason())
-              .timestamp(Instant.now())
-              .build();
-      return Mono.just(ResponseEntity.status(status.getStatus()).body(status));
+  public Mono<ResponseEntity<ServiceResponse<Void>>> handleWebInputException(
+      ServerWebInputException ex) {
+    ServiceResponse<Void> response = ServiceResponse.<Void>builder().success(false)
+        .status(ex.getStatusCode().value()).message("Validation Failed").errors(ex.getReason())
+        .timestamp(Instant.now()).requestId(RequestContext.getTraceId()).build();
+
+    return Mono.just(ResponseEntity.status(ex.getStatusCode()).body(response));
   }
 
-
+  /* Validation errors (binding errors) */
   @ExceptionHandler(WebExchangeBindException.class)
-  public Mono<ResponseEntity<ServiceResponse<Void>>> handleValidationDocs(WebExchangeBindException ex) {
-      ServiceResponse<Void> response = ServiceResponse.<Void>builder()
-          .status(ResponseStatus.builder()
-              .status(ex.getStatusCode().value())
-              .message("Validation Failed: " + ex.getBindingResult().getFieldError().getDefaultMessage())
-              .build())
-          .build();
-      return Mono.just(ResponseEntity.badRequest().body(response));
+  public Mono<ResponseEntity<ServiceResponse<Void>>> handleValidationErrors(
+      WebExchangeBindException ex) {
+    String firstError = ex.getBindingResult().getFieldErrors().isEmpty() ? "Invalid request"
+        : ex.getBindingResult().getFieldErrors().get(0).getDefaultMessage();
+
+    ServiceResponse<Void> response = ServiceResponse.<Void>builder().success(false).status(400)
+        .message("Validation Failed: " + firstError).timestamp(Instant.now())
+        .requestId(RequestContext.getTraceId()).build();
+
+    return Mono.just(ResponseEntity.badRequest().body(response));
   }
-  
+
+  /* Unsupported Media Type */
   @ExceptionHandler(UnsupportedMediaTypeStatusException.class)
-  public Mono<ResponseEntity<ResponseStatus>> handleUnsupportedMediaType(UnsupportedMediaTypeStatusException ex) {
+  public Mono<ResponseEntity<ServiceResponse<Void>>> handleUnsupportedMediaType(
+      UnsupportedMediaTypeStatusException ex) {
+    String supported = ex.getSupportedMediaTypes().isEmpty() ? "None"
+        : String.join(", ", ex.getSupportedMediaTypes().stream().map(Object::toString).toList());
 
-      String supported = ex.getSupportedMediaTypes().isEmpty() ? "None" :
-              String.join(", ", ex.getSupportedMediaTypes().stream().map(Object::toString).toList());
+    ServiceResponse<Void> response =
+        ServiceResponse.<Void>builder().success(false).status(ex.getStatusCode().value())
+            .message("Unsupported Content-Type. Supported types: " + supported)
+            .timestamp(Instant.now()).requestId(RequestContext.getTraceId()).build();
 
-      ResponseStatus status = ResponseStatus.builder()
-              .success(false)
-              .message("Validation Failed")
-              .status(ex.getStatusCode().value())
-              .errors("Unsupported Content-Type. Supported types: " + supported)
-              .timestamp(Instant.now())
-              .build();
-
-      return Mono.just(ResponseEntity.status(status.getStatus()).body(status));
+    return Mono.just(ResponseEntity.status(ex.getStatusCode()).body(response));
   }
-
 
 
 }

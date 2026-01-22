@@ -1,7 +1,12 @@
 package com.telemetry.engine.ingestion.protocol.grpc;
 
+import java.time.Instant;
 import java.util.List;
+import java.util.Objects;
 import org.springframework.grpc.server.service.GrpcService;
+import com.google.protobuf.Timestamp;
+import com.telemetry.engine.common.dto.response.ServiceResponse;
+import com.telemetry.engine.ingestion.dto.MessageEvent;
 import com.telemetry.engine.ingestion.service.IngestionService;
 import io.grpc.Status;
 import io.grpc.stub.StreamObserver;
@@ -11,73 +16,61 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 @GrpcService
 @RequiredArgsConstructor
-public class IngestionServiceGrpcImpl /*extends IngestionServiceGrpc.IngestionServiceImplBase*/ {
+public class IngestionServiceGrpcImpl extends IngestionServiceGrpc.IngestionServiceImplBase {
 
   private final IngestionService ingestionService;
-/*
+
   @Override
-  public void ingest(ServiceRequest request, StreamObserver<ServiceResponse> responseObserver) {
+  public void ingestGrpc(ServiceRequestGrpc request,
+      StreamObserver<ServiceResponseGrpc> responseObserver) {
 
-    log.error("Request received: {}", 
-        request);
-        
     try {
-      MessageEventList events = request.getPayload();
+      MessageEventListGrpc eventListGrpc = request.getPayload();
+      log.info("RECEIVED={}", request);
+      
+      List<MessageEvent> messageEvents =
+          eventListGrpc.getEventsList().stream().map(this::toMessageEvent).toList();
 
-      List<com.telemetry.engine.ingestion.dto.MessageEvent> messageEvents =
-          events.getEventsList().stream().map(this::toDomainDto).toList();
-
-      var domainRequest =
-          com.telemetry.engine.common.dto.request.ServiceRequest.<List<com.telemetry.engine.ingestion.dto.MessageEvent>>builder()
-              .payload(messageEvents).build();
-
-      ingestionService.ingest(domainRequest).doOnNext(resp -> {
-        if (!resp.getStatus().isSuccess()) {
-          log.warn("Ingestion failed: {}", resp.getStatus().getMessage());
-        }
-      }).subscribe(resp -> {
-
-        com.telemetry.engine.ingestion.protocol.grpc.ServiceResponse grpcResp =
-            mapToGrpcResponse(resp);
-
-        responseObserver.onNext(grpcResp);
+      ingestionService.ingest(messageEvents).subscribe(resp -> {
+        responseObserver.onNext(mapToGrpcResponse(resp));
+        responseObserver.onCompleted();
       }, err -> {
-        log.error("Fatal error in gRPC ingestion", err);
-        responseObserver.onError(Status.INTERNAL.withCause(err).asRuntimeException());
-      }, () -> responseObserver.onCompleted());
+        log.error("gRPC ingestion failed", err);
+        responseObserver.onError(Status.INTERNAL.withDescription("Ingestion failed").withCause(err)
+            .asRuntimeException());
+      });
 
     } catch (Exception e) {
-      // TODO Auto-generated catch block
-      e.printStackTrace();
+      log.error("Synchronous error before reactive pipeline", e);
+      responseObserver.onError(Status.INTERNAL.withDescription("Invalid gRPC request").withCause(e)
+          .asRuntimeException());
     }
-
-
-
   }
 
-
-  private com.telemetry.engine.ingestion.dto.MessageEvent toDomainDto(MessageEvent grpcEvent) {
-    return com.telemetry.engine.ingestion.dto.MessageEvent.builder()
-        .requestId(grpcEvent.getRequestId()).assetId(grpcEvent.getAssetId())
-        .latitude(grpcEvent.getLatitude()).longitude(grpcEvent.getLongitude())
-        .speed(grpcEvent.getSpeed()).heading(grpcEvent.getHeading())
-        .deviceTs(grpcEvent.hasDeviceTs() ? java.time.Instant.ofEpochSecond(
-            grpcEvent.getDeviceTs().getSeconds(), grpcEvent.getDeviceTs().getNanos()) : null)
+  private MessageEvent toMessageEvent(MessageEventRequestGrpc grpcEvent) {
+    return MessageEvent.builder().requestId(grpcEvent.getRequestId())
+        .assetId(grpcEvent.getAssetId()).latitude(grpcEvent.getLatitude())
+        .longitude(grpcEvent.getLongitude()).speed(grpcEvent.getSpeed())
+        .heading(grpcEvent.getHeading())
+        .deviceTs(
+            grpcEvent.hasDeviceTs() ? Instant.ofEpochSecond(grpcEvent.getDeviceTs().getSeconds(),
+                grpcEvent.getDeviceTs().getNanos()) : null)
         .build();
   }
 
-  private com.telemetry.engine.ingestion.protocol.grpc.ServiceResponse mapToGrpcResponse(
-      com.telemetry.engine.common.dto.response.ServiceResponse<Void> domainResp) {
+  private ServiceResponseGrpc mapToGrpcResponse(ServiceResponse<Void> response) {
+    return ServiceResponseGrpc.newBuilder().setSuccess(response.success())
+        .setMessage(Objects.requireNonNullElse(response.message(), "")).setStatus(response.status())
+        .setRequestId(Objects.requireNonNullElse(response.requestId(), ""))
+        .setTimestamp(toProtoTimestamp(response.timestamp())).build();
+  }
 
-    com.telemetry.engine.common.dto.response.ResponseStatus status = domainResp.getStatus();
-
-    return com.telemetry.engine.ingestion.protocol.grpc.ServiceResponse.newBuilder()
-        .setStatus(com.telemetry.engine.ingestion.protocol.grpc.ResponseStatus.newBuilder()
-            .setSuccess(status.isSuccess())
-            .setMessage(status.getMessage() == null ? "" : status.getMessage())
-            .setStatus(status.getStatus())
-            .setRequestId(status.getRequestId() == null ? "" : status.getRequestId()).build())
-        .build();
-  }*/
+  private Timestamp toProtoTimestamp(Instant instant) {
+    if (instant == null) {
+      return com.google.protobuf.Timestamp.getDefaultInstance();
+    }
+    return com.google.protobuf.Timestamp.newBuilder().setSeconds(instant.getEpochSecond())
+        .setNanos(instant.getNano()).build();
+  }
 
 }

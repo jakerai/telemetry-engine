@@ -21,7 +21,6 @@ import org.springframework.security.web.server.context.NoOpServerSecurityContext
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.telemetry.engine.common.constansts.ApiEndpointsConstants;
 import com.telemetry.engine.common.dto.response.ServiceResponse;
-import com.telemetry.engine.common.utils.ResponseBuilder;
 import reactor.core.publisher.Mono;
 
 @Configuration
@@ -41,8 +40,8 @@ public class SecurityConfig {
   public SecurityWebFilterChain springSecurityFilterChain(ServerHttpSecurity http) {
     return http.csrf(csrf -> csrf.disable())
         .authorizeExchange(
-            exchanges -> exchanges.pathMatchers(ApiEndpointsConstants.ALL_PUBLIC_EXTERNAL_ENDPOINTS).permitAll()
-                .anyExchange().authenticated())
+            exchanges -> exchanges.pathMatchers(ApiEndpointsConstants.ALL_PUBLIC_EXTERNAL_ENDPOINTS)
+                .permitAll().anyExchange().authenticated())
         .securityContextRepository(NoOpServerSecurityContextRepository.getInstance())
         .oauth2ResourceServer(oauth2 -> oauth2
             .jwt(jwt -> jwt.jwtDecoder(jwtDecoder)
@@ -70,9 +69,7 @@ public class SecurityConfig {
       }
 
       // Build reactive token
-      AbstractAuthenticationToken token =
-          new JwtAuthenticationToken(
-              jwt, authorities);
+      AbstractAuthenticationToken token = new JwtAuthenticationToken(jwt, authorities);
       return Mono.just(token);
     };
   }
@@ -82,8 +79,8 @@ public class SecurityConfig {
       exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
       exchange.getResponse().getHeaders().setContentType(MediaType.APPLICATION_JSON);
 
-      ServiceResponse<?> responseStatus =
-          ResponseBuilder.error("Invalid or missing token", exchange.getResponse().getStatusCode().value());
+      ServiceResponse<?> responseStatus = ServiceResponse.builder().message("Invalid or missing token")
+          .status(exchange.getResponse().getStatusCode().value()).build();
 
       return exchange.getResponse().writeWith(Mono.fromSupplier(() -> {
         try {

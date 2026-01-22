@@ -4,7 +4,7 @@ import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
-import com.telemetry.engine.common.mapper.MapperUtil;
+import com.telemetry.engine.common.mapper.JsonMapperUtil;
 import io.lettuce.core.RedisClient;
 import io.lettuce.core.api.StatefulRedisConnection;
 import io.lettuce.core.api.reactive.RedisReactiveCommands;
@@ -32,7 +32,7 @@ public class RedisService {
   // ---------------------- Key/Value Operations ----------------------
 
   public Mono<Boolean> putValue(String key, Object value, Duration ttl) {
-    return Mono.fromCallable(() -> MapperUtil.serializeToJson(value))
+    return Mono.fromCallable(() -> JsonMapperUtil.serializeToJson(value))
         .subscribeOn(Schedulers.boundedElastic())
         .flatMap(json -> commands.psetex(key, ttl.toMillis(), json)).map("OK"::equals)
         .onErrorMap(e -> new IllegalStateException("Failed to put Redis key: " + key, e));
@@ -40,7 +40,7 @@ public class RedisService {
 
   public <T> Mono<T> getValue(String key, Class<T> clazz) {
     return commands.get(key)
-        .flatMap(json -> Mono.fromCallable(() -> MapperUtil.deserializeFromJson(json, clazz))
+        .flatMap(json -> Mono.fromCallable(() -> JsonMapperUtil.deserializeFromJson(json, clazz))
             .subscribeOn(Schedulers.boundedElastic()))
         .onErrorMap(e -> new IllegalStateException("Failed to get Redis key: " + key, e));
   }
@@ -50,7 +50,7 @@ public class RedisService {
   public <T> Mono<Long> putHash(String key, Map<String, T> fields) {
     return Mono
         .fromCallable(() -> fields.entrySet().stream().collect(
-            Collectors.toMap(Map.Entry::getKey, e -> MapperUtil.serializeToJson(e.getValue()))))
+            Collectors.toMap(Map.Entry::getKey, e -> JsonMapperUtil.serializeToJson(e.getValue()))))
         .subscribeOn(Schedulers.boundedElastic())
         .flatMap(serializedMap -> commands.hset(key, serializedMap))
         .onErrorMap(e -> new IllegalStateException("Failed to put Redis hash: " + key, e));
@@ -66,7 +66,7 @@ public class RedisService {
     return commands.hgetall(key)
         .flatMap(kv -> Mono
             .fromCallable(
-                () -> Map.entry(kv.getKey(), MapperUtil.deserializeFromJson(kv.getValue(), clazz)))
+                () -> Map.entry(kv.getKey(), JsonMapperUtil.deserializeFromJson(kv.getValue(), clazz)))
             .subscribeOn(Schedulers.boundedElastic()))
         .collectMap(Map.Entry::getKey, Map.Entry::getValue);
   }
@@ -135,7 +135,7 @@ public class RedisService {
   }
   
   public Mono<Long> publish(String channel, Object message) {
-    return Mono.fromCallable(() -> MapperUtil.serializeToJson(message))
+    return Mono.fromCallable(() -> JsonMapperUtil.serializeToJson(message))
         .subscribeOn(Schedulers.boundedElastic()).flatMap(json -> commands.publish(channel, json))
         .onErrorMap(e -> new IllegalStateException(
             "Failed to publish Redis message to channel: " + channel, e));

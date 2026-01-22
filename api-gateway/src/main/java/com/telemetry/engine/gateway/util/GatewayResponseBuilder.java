@@ -5,7 +5,6 @@ import org.springframework.http.MediaType;
 import org.springframework.web.server.ServerWebExchange;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.telemetry.engine.common.dto.response.ServiceResponse;
-import com.telemetry.engine.common.utils.ResponseBuilder;
 import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Mono;
 
@@ -18,8 +17,8 @@ public class GatewayResponseBuilder {
     exchange.getResponse().setStatusCode(status);
     exchange.getResponse().getHeaders().setContentType(MediaType.APPLICATION_JSON);
 
-    ServiceResponse<?> response =
-        ResponseBuilder.error(message, exchange.getResponse().getStatusCode().value());
+    ServiceResponse<?> response = ServiceResponse.builder().message(message)
+        .status(exchange.getResponse().getStatusCode().value()).build();
 
     try {
       byte[] bytes = objectMapper.writeValueAsBytes(response);
@@ -30,5 +29,5 @@ public class GatewayResponseBuilder {
       return exchange.getResponse().setComplete();
     }
   }
-  
+
 }

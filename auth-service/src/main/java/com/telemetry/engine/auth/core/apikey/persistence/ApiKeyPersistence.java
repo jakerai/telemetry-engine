@@ -7,7 +7,7 @@ public interface ApiKeyPersistence {
   
   ApiKey save(ApiKey apiKey);
 
-  Optional<ApiKey> findByIdAndActiveTrueAndRevokedFalseAndDeletedFalse(String key);
+  Optional<ApiKey> findByKeyAndActiveTrueAndRevokedFalseAndDeletedFalse(String key);
 
   Optional<ApiKey> findByIdAndActiveTrueAndRevokedFalseAndDeletedFalse(Long id);
   

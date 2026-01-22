@@ -18,7 +18,7 @@ import jakarta.validation.Valid;
 @RequestMapping(path = "/api/internal/v1/api-keys")
 @RestController
 public class ApiKeyValidationController {
-  
+
   @Autowired
   private ApiKeyService apiKeyService;
 

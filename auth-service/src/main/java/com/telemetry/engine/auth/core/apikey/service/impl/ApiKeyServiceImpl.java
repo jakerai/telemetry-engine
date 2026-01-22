@@ -1,13 +1,11 @@
 package com.telemetry.engine.auth.core.apikey.service.impl;
 
-import java.time.Instant;
-import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
-import com.telemetry.engine.auth.core.apikey.dto.request.ApiKeyRegistrationRequest;
+import com.telemetry.engine.auth.core.apikey.dto.request.ApiKeyCreateRequest;
 import com.telemetry.engine.auth.core.apikey.dto.request.ApiKeyValidationRequest;
-import com.telemetry.engine.auth.core.apikey.dto.response.ApiKeyRegistrationResponse;
+import com.telemetry.engine.auth.core.apikey.dto.response.ApiKeyCreateResponse;
 import com.telemetry.engine.auth.core.apikey.dto.response.ApiKeyValidationResponse;
 import com.telemetry.engine.auth.core.apikey.entity.ApiKey;
 import com.telemetry.engine.auth.core.apikey.mapper.ApiKeyMapper;
@@ -20,7 +18,6 @@ import com.telemetry.engine.common.context.RequestContext;
 import com.telemetry.engine.common.dto.request.ServiceRequest;
 import com.telemetry.engine.common.dto.response.ServiceResponse;
 import com.telemetry.engine.common.exception.NotFoundException;
-import com.telemetry.engine.common.utils.ResponseBuilder;
 import com.telemetry.engine.common.utils.SecretUtils;
 import lombok.RequiredArgsConstructor;
 
@@ -34,28 +31,27 @@ public class ApiKeyServiceImpl implements ApiKeyService {
 
 
   @Override
-  public ServiceResponse<ApiKeyRegistrationResponse> createApiKey(
-      ServiceRequest<ApiKeyRegistrationRequest> serviceRequest) {
+  public ServiceResponse<ApiKeyCreateResponse> createApiKey(
+      ServiceRequest<ApiKeyCreateRequest> serviceRequest) {
 
     String clientIp = RequestContext.getClientIp();
     AuthenticatedUser currentUser = AuthUtil.getCurrentUserOrThrow();
-    ApiKeyRegistrationRequest payload = serviceRequest.getPayload();
-    log.info(
-        "Creating API key from ip={} for asset ID={} by user ID={}",
-        clientIp, payload.getAssetId(), currentUser.getId());
+    ApiKeyCreateRequest apiKeyCreateRequest = serviceRequest.payload();
+
+    log.info("Creating API key from ip={} for asset ID={} by user ID={}", clientIp,
+        apiKeyCreateRequest.getAssetId(), currentUser.getId());
 
     String generatedApiKey = ApiKeyGenerator.generate();
 
-    ApiKey apiKey = ApiKeyMapper.toEntity(payload);
+    ApiKey apiKey = ApiKeyMapper.toEntity(apiKeyCreateRequest);
     apiKey.setKey(SecretUtils.hash(generatedApiKey));
     apiKey.setUserId(currentUser.getId());
 
     apiKey = apiKeyPersistence.save(apiKey);
 
-    ApiKeyRegistrationResponse responsePayload = ApiKeyMapper
-        .toApiKeyRegistrationResponse(generatedApiKey, apiKey.getExpiresAt(), apiKey.isActive());
-
-    return ResponseBuilder.successWithPayload("API Key created successfully", responsePayload);
+    ApiKeyCreateResponse data =
+        ApiKeyCreateResponse.from(generatedApiKey, apiKey.getExpiresAt(), apiKey.isActive());
+    return ServiceResponse.success(data, "API key created successfully");
   }
 
 
@@ -64,40 +60,28 @@ public class ApiKeyServiceImpl implements ApiKeyService {
       ServiceRequest<ApiKeyValidationRequest> serviceRequest) {
     String clientIp = RequestContext.getClientIp();
 
-    String rawApiKey = serviceRequest.getPayload().getApiKey();
+    ApiKeyValidationRequest apiKeyValidationRequest = serviceRequest.payload();
+    String rawApiKey = apiKeyValidationRequest.getApiKey();
 
     log.info("Validating API key from ip={}", clientIp);
     String hashedKey = SecretUtils.hash(rawApiKey);
-    Optional<ApiKey> apiKeyOpt =
-        apiKeyPersistence.findByIdAndActiveTrueAndRevokedFalseAndDeletedFalse(hashedKey);
-
-    boolean isValid = isKeyValid(apiKeyOpt);
-
-    ApiKey apiKey = apiKeyOpt.get();
-
-    ApiKeyValidationResponse responsePayload = ApiKeyValidationResponse.builder().valid(isValid)
-        .apiKeyHash(hashedKey).userId(apiKey.getUserId()).expiresAt(apiKey.getExpiresAt()).build();
-
-    return ResponseBuilder.successWithPayload("API Key validation completed", responsePayload);
+    
+    ApiKey apiKey = apiKeyPersistence.findByKeyAndActiveTrueAndRevokedFalseAndDeletedFalse(hashedKey)
+        .orElseThrow(() -> new NotFoundException("API key not found or is invalid"));
+    
+    ApiKeyValidationResponse data = ApiKeyValidationResponse.from(apiKey);
+    return ServiceResponse.success(data, "API key validated successfully");
   }
 
-  private boolean isKeyValid(Optional<ApiKey> apiKeyOpt) {
-    return apiKeyOpt.filter(key -> key.isActive() && !key.isRevoked() && !key.isDeleted())
-        .filter(this::isNotExpired).isPresent();
-  }
-
-  private boolean isNotExpired(ApiKey key) {
-    return key.getExpiresAt() == null || key.getExpiresAt().isAfter(Instant.now());
-  }
 
 
   @Override
-  public ServiceResponse<?> revokeApiKey(Long id) {
+  public ServiceResponse<Void> revokeApiKey(Long id) {
     String clientIp = RequestContext.getClientIp();
     AuthenticatedUser currentUser = AuthUtil.getCurrentUserOrThrow();
 
-    log.info("Revoking API key with ID={} for user ID from ip={}",
-        id, currentUser.getId(), clientIp);
+    log.info("Revoking API key with ID={} for user ID from ip={}", id, currentUser.getId(),
+        clientIp);
 
 
     ApiKey apiKey = apiKeyPersistence.findByIdAndActiveTrueAndRevokedFalseAndDeletedFalse(id)
@@ -106,26 +90,24 @@ public class ApiKeyServiceImpl implements ApiKeyService {
     apiKey.setRevoked(true);
     apiKey.setActive(false);
     apiKeyPersistence.save(apiKey);
-
-    return ResponseBuilder.success("API Key revoked successfully");
+    return ServiceResponse.success("API key revoked successfully");
   }
 
 
   @Override
-  public ServiceResponse<?> deleteApiKey(Long id) {
+  public ServiceResponse<Void> deleteApiKey(Long id) {
     String clientIp = RequestContext.getClientIp();
     AuthenticatedUser currentUser = AuthUtil.getCurrentUserOrThrow();
 
-    log.info("Revoking API key with ID={} for user ID from ip={}",
-        id, currentUser.getId(), clientIp);
+    log.info("Revoking API key with ID={} for user ID from ip={}", id, currentUser.getId(),
+        clientIp);
     ApiKey apiKey = apiKeyPersistence.findByIdAndActiveTrueAndRevokedFalseAndDeletedFalse(id)
         .orElseThrow(() -> new NotFoundException("API key not found or already revoked: id=" + id));
 
     apiKey.setActive(false);
     apiKey.setDeleted(true);
     apiKeyPersistence.save(apiKey);
-
-    return ResponseBuilder.success("API Key deleted successfully");
+    return ServiceResponse.success("API key deleted successfully");
   }
 
 }

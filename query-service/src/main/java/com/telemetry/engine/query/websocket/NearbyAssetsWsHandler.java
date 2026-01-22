@@ -4,8 +4,8 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.socket.WebSocketHandler;
 import org.springframework.web.reactive.socket.WebSocketMessage;
 import org.springframework.web.reactive.socket.WebSocketSession;
-import com.telemetry.engine.common.mapper.MapperUtil;
-import com.telemetry.engine.query.dto.NearbyAssetsRequest;
+import com.telemetry.engine.common.mapper.JsonMapperUtil;
+import com.telemetry.engine.query.dto.resquest.NearbyAssetsRequest;
 import com.telemetry.engine.query.service.AssetService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -18,7 +18,7 @@ import reactor.core.publisher.Mono;
 public class NearbyAssetsWsHandler implements WebSocketHandler {
 
   private final AssetService assetService;
-  private final MapperUtil mapperService;
+  private final JsonMapperUtil mapperService;
 
 
   @Override

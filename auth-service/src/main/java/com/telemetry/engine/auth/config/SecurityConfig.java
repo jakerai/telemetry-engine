@@ -23,7 +23,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.telemetry.engine.auth.security.jwt.filter.JwtSecurityFilter;
 import com.telemetry.engine.common.constansts.ApiEndpointsConstants;
 import com.telemetry.engine.common.dto.response.ServiceResponse;
-import com.telemetry.engine.common.utils.ResponseBuilder;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
 
@@ -49,8 +48,8 @@ public class SecurityConfig {
   public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
     http.cors(cors -> cors.disable()).csrf(csrf -> csrf.disable())
         .authorizeHttpRequests(
-            (authz) -> authz.requestMatchers(ApiEndpointsConstants.ALL_PUBLIC_INTERNAL_ENDPOINTS).permitAll()
-                .anyRequest().authenticated())
+            (authz) -> authz.requestMatchers(ApiEndpointsConstants.ALL_PUBLIC_INTERNAL_ENDPOINTS)
+                .permitAll().anyRequest().authenticated())
         .sessionManagement((sessionManagement) -> {
           sessionManagement.sessionCreationPolicy(SessionCreationPolicy.STATELESS);
         })
@@ -101,8 +100,8 @@ public class SecurityConfig {
       response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
       response.setContentType("application/json");
 
-      ServiceResponse<?> responseStatus =
-          ResponseBuilder.error("Invalid or missing token", response.getStatus());
+      ServiceResponse<?> responseStatus = ServiceResponse.builder().message("Invalid or missing token")
+          .status(response.getStatus()).build();
 
       response.getWriter().write(objectMapper.writeValueAsString(responseStatus));
     };

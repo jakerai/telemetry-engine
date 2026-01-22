@@ -7,7 +7,7 @@ import java.util.Map;
 import org.springframework.stereotype.Service;
 import com.telemetry.engine.common.constansts.H3Constants;
 import com.telemetry.engine.common.geo.H3Service;
-import com.telemetry.engine.common.mapper.MapperUtil;
+import com.telemetry.engine.common.mapper.JsonMapperUtil;
 import com.telemetry.engine.common.redis.RedisService;
 import com.telemetry.engine.consumer.dto.MessageEvent;
 import com.telemetry.engine.consumer.entity.AssetCurrentLocation;
@@ -43,7 +43,7 @@ public class ProcessorImpl implements Processor {
     }
 
     return Mono
-        .fromCallable(() -> MapperUtil.deserializeJsonToList(jsonArrayValue, MessageEvent.class))
+        .fromCallable(() -> JsonMapperUtil.deserializeJsonToList(jsonArrayValue, MessageEvent.class))
         .subscribeOn(Schedulers.boundedElastic()).flatMap(events -> {
 
           if (events.isEmpty()) {
@@ -100,7 +100,7 @@ public class ProcessorImpl implements Processor {
           String oldH3 = (String) oldState.get("h3Index");
 
           // Mapping DTO to Map for Redis Hash storage
-          Map<String, Object> fields = MapperUtil.toMap(event);
+          Map<String, Object> fields = JsonMapperUtil.toMap(event);
           fields.put("h3Index", newH3);
 
           // Updating the Asset Snapshot in Redis

@@ -1,14 +1,17 @@
 package com.telemetry.engine.query.persistence;
 
-import com.telemetry.engine.query.dto.AssetLocationViewDto;
+import com.telemetry.engine.query.dto.response.AssetLocation;
+import com.telemetry.engine.query.entity.AssetCurrentLocation;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 public interface AssetCurrentLocationPersistence {
 
-  Flux<AssetLocationViewDto> findNearby(String assetType, double lat, double lon,
+  Flux<AssetLocation> findNearby(String assetType, double lat, double lon,
       double radiusMeters);
 
-  Mono<AssetLocationViewDto> findByAssetId(Long assetId);
+  Mono<AssetLocation> findByAssetId(Long assetId);
+
+  Mono<AssetLocation> save(AssetCurrentLocation asset);
 
 }

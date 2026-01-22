@@ -1,4 +1,4 @@
-package com.telemetry.engine.query.dto;
+package com.telemetry.engine.query.dto.resquest;
 
 import lombok.Builder;
 import lombok.Getter;

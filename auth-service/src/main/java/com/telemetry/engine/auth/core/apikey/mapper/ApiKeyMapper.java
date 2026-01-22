@@ -3,15 +3,15 @@ package com.telemetry.engine.auth.core.apikey.mapper;
 import java.time.Duration;
 import java.time.Instant;
 import com.telemetry.engine.auth.core.apikey.dto.ApiKeyDto;
-import com.telemetry.engine.auth.core.apikey.dto.request.ApiKeyRegistrationRequest;
-import com.telemetry.engine.auth.core.apikey.dto.response.ApiKeyRegistrationResponse;
+import com.telemetry.engine.auth.core.apikey.dto.request.ApiKeyCreateRequest;
+import com.telemetry.engine.auth.core.apikey.dto.response.ApiKeyCreateResponse;
 import com.telemetry.engine.auth.core.apikey.entity.ApiKey;
 
 public class ApiKeyMapper {
 
-  public static ApiKeyRegistrationResponse toApiKeyRegistrationResponse(String key,
+  public static ApiKeyCreateResponse toApiKeyRegistrationResponse(String key,
       Instant expiresAt, boolean active) {
-    return ApiKeyRegistrationResponse.builder().key(key).expiresAt(expiresAt).active(active)
+    return ApiKeyCreateResponse.builder().key(key).expiresAt(expiresAt).active(active)
         .build();
   }
 
@@ -26,7 +26,7 @@ public class ApiKeyMapper {
   }
 
 
-  public static ApiKey toEntity(ApiKeyRegistrationRequest payload) {
+  public static ApiKey toEntity(ApiKeyCreateRequest payload) {
     return ApiKey.builder()
         .expiresAt(Instant.now().plus(Duration.ofDays(payload.getExpiresInDays()))).build();
   }

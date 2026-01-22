@@ -1,10 +1,11 @@
 package com.telemetry.engine.ingestion.producer;
 
+import java.time.Duration;
 import java.util.List;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
-import com.telemetry.engine.common.mapper.MapperUtil;
+import com.telemetry.engine.common.mapper.JsonMapperUtil;
 import com.telemetry.engine.ingestion.dto.MessageEvent;
 import io.github.resilience4j.circuitbreaker.CircuitBreaker;
 import io.github.resilience4j.reactor.circuitbreaker.operator.CircuitBreakerOperator;
@@ -30,18 +31,20 @@ public class IngestionProducer {
   private static final int MAX_PARALLEL_BATCHES = 4;
 
   private final KafkaSender<String, String> kafkaSender; // JSON string messages
- 
+
 
   /**
-   * Sends events in batches to Kafka. 
-   * Each Kafka record contains a JSON array of events.
+   * Sends events in batches to Kafka. Each Kafka record contains a JSON array of events.
    */
   public Mono<Void> send(String key, List<MessageEvent> events, CircuitBreaker cb) {
     log.info("Ingesting {} events", events.size());
 
-    return Flux.fromIterable(events).buffer(BATCH_SIZE) // creating micro-batches
+    return Flux.fromIterable(events).bufferTimeout(BATCH_SIZE, Duration.ofMillis(200))
+        .onBackpressureBuffer(10_000,
+            dropped -> log.warn("Dropped {} events due to backpressure", dropped.size()))
         .flatMap(batch -> sendBatchAsJsonArray(batch, key, cb), MAX_PARALLEL_BATCHES).then();
   }
+
 
   /**
    * Sends a single batch as one Kafka record (JSON array string)
@@ -49,7 +52,7 @@ public class IngestionProducer {
   private Mono<Void> sendBatchAsJsonArray(List<MessageEvent> batch, String key, CircuitBreaker cb) {
     try {
       // Converting entire batch to JSON array string
-      String batchJson = MapperUtil.serializeToJson(batch);
+      String batchJson = JsonMapperUtil.serializeToJson(batch);
 
       // Creating Kafka record
       ProducerRecord<String, String> record = new ProducerRecord<>(topic, key, batchJson);

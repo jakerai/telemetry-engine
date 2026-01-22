@@ -29,13 +29,12 @@ public class AuthServiceClient {
 
 
     ApiKeyValidateRequest validateRequest = ApiKeyValidateRequest.builder().apiKey(apiKey).build();
-    ServiceRequest<ApiKeyValidateRequest> serviceRequest = new ServiceRequest<>();
-    serviceRequest.setPayload(validateRequest);
-
+    ServiceRequest<ApiKeyValidateRequest> serviceRequest = ServiceRequest.of(validateRequest);
+    
     return webClient.post().uri("/api/internal/v1/api-keys/validate")
         .contentType(MediaType.APPLICATION_JSON).bodyValue(serviceRequest).retrieve()
         .bodyToMono(new ParameterizedTypeReference<ServiceResponse<ApiKeyMeta>>() {})
-        .map(ServiceResponse::getPayload) 
+        .map(ServiceResponse::data) 
         .doOnNext(meta -> log.info("Found apiKey={} userId={}", apiKey, meta.getUserId()))
         .onErrorResume(ex -> {
           log.error("Error fetching apiKey={}", apiKey, ex);

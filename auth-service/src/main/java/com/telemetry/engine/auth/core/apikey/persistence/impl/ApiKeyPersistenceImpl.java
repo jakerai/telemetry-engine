@@ -21,7 +21,7 @@ public class ApiKeyPersistenceImpl implements ApiKeyPersistence {
   }
 
   @Override
-  public Optional<ApiKey> findByIdAndActiveTrueAndRevokedFalseAndDeletedFalse(String key) {
+  public Optional<ApiKey> findByKeyAndActiveTrueAndRevokedFalseAndDeletedFalse(String key) {
     return apiKeyRepository.findByKeyAndActiveTrueAndRevokedFalseAndDeletedFalse(key);
   }
 

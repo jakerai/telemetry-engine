@@ -27,7 +27,6 @@ import com.telemetry.engine.auth.util.AuthUtil;
 import com.telemetry.engine.common.dto.response.ServiceResponse;
 import com.telemetry.engine.common.exception.DuplicateResourceException;
 import com.telemetry.engine.common.exception.NotFoundException;
-import com.telemetry.engine.common.utils.ResponseBuilder;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -111,8 +110,7 @@ public class UserServiceImpl implements UserService {
 
   @Override
   public UserDto createUserOrThrow(SignupRequest signupRequest) {
-    log.info("Creating user with email={}",
-        signupRequest.getEmail());
+    log.info("Creating user with email={}", signupRequest.getEmail());
 
     Optional<User> userOpt = userPersistence.findByEmail(signupRequest.getEmail());
 
@@ -138,8 +136,7 @@ public class UserServiceImpl implements UserService {
 
   @Override
   public UserDto updateLoginMetadataOrThrow(Long userId, String ip, Instant loginAt) {
-    log.info("Updating login metadata for user ID={}",
-        userId);
+    log.info("Updating login metadata for user ID={}", userId);
 
     User user = findByIdOrThrow(userId);
     user.setLastLoginAt(loginAt);
@@ -160,9 +157,9 @@ public class UserServiceImpl implements UserService {
     log.info("Fetching user self profile with user ID={}", currentUser.getId());
 
     User user = findByIdOrThrow(currentUser.getId());
-    MyProfileResponse myProfileResponse = UserMapper.toMyProfileResponse(user);
-    enrichUserWithRoles(user, myProfileResponse);
-    return ResponseBuilder.successWithPayload("Profile fetched successfully", myProfileResponse);
+    MyProfileResponse data = MyProfileResponse.from(user);
+    enrichUserWithRoles(user, data);
+    return ServiceResponse.success(data, "Profile fetched successfully");
   }
 
   @Override
@@ -171,13 +168,12 @@ public class UserServiceImpl implements UserService {
     log.info("Fetching user by id={}", userId);
 
     User user = findByIdOrThrow(currentUser.getId());
-    UserProfileResponse userProfileResponse = UserMapper.toUserProfileResponse(user);
+    UserProfileResponse data = UserProfileResponse.from(user);
 
-    enrichUserWithRoles(user, userProfileResponse);
+    enrichUserWithRoles(user, data);
     log.info("User profile retrieval successful for user ID={}", user.getId());
 
-    return ResponseBuilder.successWithPayload("User profile fetched successfully",
-        userProfileResponse);
+    return ServiceResponse.success(data, "User profile fetched successfully");
   }
 
 
@@ -185,9 +181,7 @@ public class UserServiceImpl implements UserService {
   @Override
   public ServiceResponse<PictureUploadResponse> updateUserProfilePicture(MultipartFile file) {
     AuthenticatedUser currentUser = AuthUtil.getCurrentUserOrThrow();
-    log.info(
-        "Profile picture upload request by user with user ID={}",
-        currentUser.getId());
+    log.info("Profile picture upload request by user with user ID={}", currentUser.getId());
 
     User user = findByIdOrThrow(currentUser.getId());
 
@@ -197,11 +191,10 @@ public class UserServiceImpl implements UserService {
     user = userPersistence.save(user);
     log.info("Updated profile picture for user with user ID={} path={}", user.getId(), filePath);
 
-    PictureUploadResponse profilePictureUploadResponse =
+    PictureUploadResponse data =
         PictureUploadResponse.builder().picture(user.getPicture()).build();
 
-    return ResponseBuilder.successWithPayload("Profile picture updated successfully",
-        profilePictureUploadResponse);
+    return ServiceResponse.success(data, "Profile picture uploaded successfully");
   }
 
   public UserDto getUserOrThrow(Long userId) {
@@ -214,8 +207,7 @@ public class UserServiceImpl implements UserService {
 
   @Override
   public void markEmailVerified(Long userId) {
-    log.info("Updating email as verified for user ID={}",
-        userId);
+    log.info("Updating email as verified for user ID={}", userId);
     User user = findByIdOrThrow(userId);
     if (!user.isEmailVerified()) {
       user.setEmailVerified(true);
@@ -226,15 +218,12 @@ public class UserServiceImpl implements UserService {
 
   @Override
   public void markMobileNumberVerified(Long userId) {
-    log.info(
-        "Updating mobile number as verified for user ID={}",
-        userId);
+    log.info("Updating mobile number as verified for user ID={}", userId);
     User user = findByIdOrThrow(userId);
     if (!user.isMobileNumberVerified()) {
       user.setMobileNumberVerified(true);
       userPersistence.save(user);
     }
-
   }
 
 
@@ -245,6 +234,5 @@ public class UserServiceImpl implements UserService {
     user.setPassword(passwordEncoder.encode(newPassword));
     user = userPersistence.save(user);
   }
-
 
 }

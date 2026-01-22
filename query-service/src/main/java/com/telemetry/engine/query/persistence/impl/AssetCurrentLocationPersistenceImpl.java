@@ -1,9 +1,9 @@
 package com.telemetry.engine.query.persistence.impl;
 
-import java.time.Instant;
 import org.springframework.r2dbc.core.DatabaseClient;
 import org.springframework.stereotype.Component;
-import com.telemetry.engine.query.dto.AssetLocationViewDto;
+import com.telemetry.engine.query.dto.response.AssetLocation;
+import com.telemetry.engine.query.entity.AssetCurrentLocation;
 import com.telemetry.engine.query.enums.AssetStatus;
 import com.telemetry.engine.query.persistence.AssetCurrentLocationPersistence;
 import io.r2dbc.spi.Row;
@@ -21,7 +21,7 @@ public class AssetCurrentLocationPersistenceImpl implements AssetCurrentLocation
 
 
   @Override
-  public Flux<AssetLocationViewDto> findNearby(String assetType, double lat, double lon,
+  public Flux<AssetLocation> findNearby(String assetType, double lat, double lon,
       double radiusMeters) {
     String sql = """
             SELECT acl.asset_id     AS asset_id,
@@ -49,11 +49,11 @@ public class AssetCurrentLocationPersistenceImpl implements AssetCurrentLocation
         """;
 
     return databaseClient.sql(sql).bind("$1", assetType).bind("$2", lon).bind("$3", lat)
-        .bind("$4", radiusMeters).<AssetLocationViewDto>map((row, meta) -> mapRowToDto(row)).all();
+        .bind("$4", radiusMeters).<AssetLocation>map((row, meta) -> mapRowToDto(row)).all();
   }
 
   @Override
-  public Mono<AssetLocationViewDto> findByAssetId(Long assetId) {
+  public Mono<AssetLocation> findByAssetId(Long assetId) {
     String sql = """
             SELECT
                 a.id            AS asset_id,
@@ -71,25 +71,31 @@ public class AssetCurrentLocationPersistenceImpl implements AssetCurrentLocation
         """;
 
     return databaseClient.sql(sql).bind("$1", assetId)
-        .<AssetLocationViewDto>map((row, meta) -> mapRowToDto(row)).one();
+        .<AssetLocation>map((row, meta) -> mapRowToDto(row)).one();
   }
 
-  private AssetLocationViewDto mapRowToDto(Row row) {
+  private AssetLocation mapRowToDto(Row row) {
 
     String statusStr = row.get("asset_status", String.class);
     AssetStatus status = (statusStr != null) ? AssetStatus.valueOf(statusStr) : AssetStatus.UNKNOWN;
 
-    return AssetLocationViewDto.builder().assetId(row.get("asset_id", Long.class))
-        .name(row.get("asset_name", String.class)).model(row.get("asset_model", String.class))
-        .status(status).currentLat(row.get("current_lat", Double.class))
-        .currentLon(row.get("current_lon", Double.class)).speed(getSafeDouble(row, "speed"))
-        .heading(getSafeDouble(row, "heading")).deviceTs(row.get("device_ts", Instant.class))
+    return AssetLocation.builder().assetId(row.get("asset_id", Long.class))
+      //  .name(row.get("asset_name", String.class)).model(row.get("asset_model", String.class))
+      //  .status(status).currentLat(row.get("current_lat", Double.class))
+      //  .currentLon(row.get("current_lon", Double.class)).speed(getSafeDouble(row, "speed"))
+       // .heading(getSafeDouble(row, "heading")).deviceTs(row.get("device_ts", Instant.class))
         .build();
   }
 
   private Double getSafeDouble(Row row, String column) {
     Double val = row.get(column, Double.class);
     return (val != null) ? val : 0.0;
+  }
+
+  @Override
+  public Mono<AssetLocation> save(AssetCurrentLocation asset) {
+    // TODO Auto-generated method stub
+    return null;
   }
 
 }

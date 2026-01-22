@@ -15,7 +15,7 @@ import lombok.Setter;
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
-public class ResetPasswordRequest {
+public class PasswordResetRequest {
 
   @NotBlank(message = "Email is required")
   @Email(message = "Email must be valid")

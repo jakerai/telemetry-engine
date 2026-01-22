@@ -6,7 +6,6 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import com.telemetry.engine.common.dto.request.ServiceRequest;
 import com.telemetry.engine.common.dto.response.ServiceResponse;
 import com.telemetry.engine.ingestion.dto.MessageEvent;
 import com.telemetry.engine.ingestion.service.IngestionService;
@@ -23,10 +22,10 @@ public class IngestionController {
 
   @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE,
       produces = MediaType.APPLICATION_JSON_VALUE)
-  public Mono<ServiceResponse<Void>> ingest(
-      @RequestBody @Valid ServiceRequest<List<MessageEvent>> serviceRequest) {
+  public Mono<ServiceResponse<Void>> ingest(@RequestBody @Valid List<MessageEvent> serviceRequest) {
 
     return ingestionService.ingest(serviceRequest);
+        
   }
 
 }

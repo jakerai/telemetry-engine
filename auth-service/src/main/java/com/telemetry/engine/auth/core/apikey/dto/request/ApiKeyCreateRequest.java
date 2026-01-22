@@ -17,7 +17,7 @@ import lombok.Setter;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class ApiKeyRegistrationRequest {
+public class ApiKeyCreateRequest {
 
   @NotBlank(message = "Asset ID is required")
   @Pattern(regexp = "^[A-Za-z0-9-]+$",

@@ -45,7 +45,8 @@ public class ApiKey extends BaseEntity {
   private boolean deleted = false;
 
   public boolean isValid() {
-    return !revoked && (expiresAt == null || expiresAt.isAfter(Instant.now()));
+    return active && !revoked && (expiresAt == null || expiresAt.isAfter(Instant.now()));
   }
 
+ 
 }

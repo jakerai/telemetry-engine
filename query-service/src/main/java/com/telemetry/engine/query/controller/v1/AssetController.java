@@ -6,8 +6,8 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-import com.telemetry.engine.common.dto.response.ServiceResponse;
-import com.telemetry.engine.query.dto.AssetLocationViewDto;
+import com.telemetry.engine.query.dto.response.AssetLocation;
+import com.telemetry.engine.query.dto.response.NearbyAsset;
 import com.telemetry.engine.query.service.AssetService;
 import lombok.RequiredArgsConstructor;
 import reactor.core.publisher.Flux;
@@ -23,19 +23,19 @@ public class AssetController {
   public Flux<ServerSentEvent<?>> streamNearbyAssets(@RequestParam String assetType,
       @RequestParam double lat, @RequestParam double lon, @RequestParam int radiusMeters) {
 
-    return assetService.getNearbyAssets(lat, lon, assetType, radiusMeters).map(data -> {
-      String eventType = (String) data.getOrDefault("streamType", "delta");
-      return ServerSentEvent.builder().event(eventType).data(data)
-          .build(); /* eventType will be snapshot, delta, or heartbeat */
-
-
-    });
+    return assetService.getNearbyAssets(lat, lon, assetType, radiusMeters)
+        .map(event -> ServerSentEvent
+            .<NearbyAsset>builder().event(event.streamType().name().toLowerCase())
+            .data(event.data()) /* null for heartbeat */
+            .build());
   }
 
   @GetMapping(path = "/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-  public Flux<ServiceResponse<AssetLocationViewDto>> streamAssetCurrentLocation(
+  public Flux<ServerSentEvent<AssetLocation>> streamAssetCurrentLocation(
       @RequestParam Long assetId) {
-    return assetService.streamAssetCurrentLocation(assetId);
+    return assetService.streamAssetCurrentLocation(assetId)
+        .map(event -> ServerSentEvent.<AssetLocation>builder()
+            .event(event.streamType().name().toLowerCase()).data(event.data()).build());
   }
 
 }

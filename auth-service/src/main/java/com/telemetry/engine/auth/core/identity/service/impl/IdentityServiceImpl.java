@@ -15,9 +15,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.telemetry.engine.auth.core.activity.enums.Action;
 import com.telemetry.engine.auth.core.activity.service.ActivityService;
-import com.telemetry.engine.auth.core.identity.dto.request.ForgotPasswordRequest;
 import com.telemetry.engine.auth.core.identity.dto.request.LoginRequest;
-import com.telemetry.engine.auth.core.identity.dto.request.ResetPasswordRequest;
+import com.telemetry.engine.auth.core.identity.dto.request.PasswordForgotRequest;
+import com.telemetry.engine.auth.core.identity.dto.request.PasswordResetRequest;
 import com.telemetry.engine.auth.core.identity.dto.request.SignupRequest;
 import com.telemetry.engine.auth.core.identity.dto.response.LoginResponse;
 import com.telemetry.engine.auth.core.identity.dto.response.RefreshTokenResponse;
@@ -25,7 +25,6 @@ import com.telemetry.engine.auth.core.identity.service.IdentityService;
 import com.telemetry.engine.auth.core.token.dto.TokenDto;
 import com.telemetry.engine.auth.core.token.service.TokenService;
 import com.telemetry.engine.auth.core.user.dto.UserDto;
-import com.telemetry.engine.auth.core.user.mapper.UserMapper;
 import com.telemetry.engine.auth.core.user.service.UserService;
 import com.telemetry.engine.auth.core.verification.enums.VerificationChannel;
 import com.telemetry.engine.auth.core.verification.enums.VerificationIntent;
@@ -40,7 +39,6 @@ import com.telemetry.engine.common.dto.request.ServiceRequest;
 import com.telemetry.engine.common.dto.response.ServiceResponse;
 import com.telemetry.engine.common.exception.InvalidTokenException;
 import com.telemetry.engine.common.exception.UnauthorizedException;
-import com.telemetry.engine.common.utils.ResponseBuilder;
 import lombok.RequiredArgsConstructor;
 
 @Service
@@ -86,34 +84,29 @@ public class IdentityServiceImpl implements IdentityService {
 
   @Transactional
   @Override
-  public ServiceResponse<?> signup(ServiceRequest<SignupRequest> serviceRequest) {
+  public ServiceResponse<Void> signup(ServiceRequest<SignupRequest> serviceRequest) {
     String clientIp = RequestContext.getClientIp();
 
-    SignupRequest signupDto = serviceRequest.getPayload();
+    SignupRequest signupRequest = serviceRequest.payload();
+    log.info("New user signup for email={} from ip={}", signupRequest.getEmail(), clientIp);
 
-    log.info("New user signup for email={} from ip={}",
-        signupDto.getEmail(), clientIp);
-
-    UserDto userDto = userService.createUserOrThrow(signupDto);
+    UserDto userDto = userService.createUserOrThrow(signupRequest);
 
     log.info("New User signed up successfully with ID={}, email={}", userDto.getId(),
         userDto.getEmail());
 
     verificationService.sendVerification(userDto, VerificationIntent.SIGNUP,
         VerificationChannel.EMAIL);
-
-    return ResponseBuilder.success("Signup successfully");
+    return ServiceResponse.success("Signup successfully");
   }
 
 
   @Override
   public ServiceResponse<LoginResponse> login(ServiceRequest<LoginRequest> serviceRequest) {
 
-    LoginRequest loginRequest = serviceRequest.getPayload();
     String clientIp = RequestContext.getClientIp();
-
-    log.info("Login request for email={} from ip={}",
-        loginRequest.getEmail(), clientIp);
+    LoginRequest loginRequest = serviceRequest.payload();
+    log.info("Login request for email={} from ip={}", loginRequest.getEmail(), clientIp);
 
     AuthenticatedUser user = authenticateUser(loginRequest.getEmail(), loginRequest.getPassword());
     UserDto userDto = userService.updateLoginMetadataOrThrow(user.getId(), clientIp, Instant.now());
@@ -131,28 +124,27 @@ public class IdentityServiceImpl implements IdentityService {
         jwtService.generateAccessTokenOrThrow(userDto.getUsername(), userDto.getId(),
             userDto.getRolesAsList(), userDto.getPermissionsAsList(), refreshToken.getId());
 
-    LoginResponse loginResponse = UserMapper.toUserLoginResponse(generatedAccessToken.getValue(),
+    LoginResponse data = LoginResponse.from(generatedAccessToken.getValue(),
         generatedAccessToken.getExpiresIn(), generatedRefreshToken.getValue(), userDto);
+
     log.info("Login successful for email: {}", userDto.getEmail());
 
-    return ResponseBuilder.successWithPayload("Login successful", loginResponse);
+    return ServiceResponse.success(data, "Login successfully");
   }
 
   @Override
-  public ServiceResponse<?> logout() {
+  public ServiceResponse<Void> logout() {
 
     AuthenticatedUser currentUser = AuthUtil.getCurrentUserOrThrow();
     String clientIp = RequestContext.getClientIp();
     Long refreshTokenId = RequestContext.getRefreshTokenId();
-    log.info("Logout request for user ID={} from ip={}",
-        currentUser.getId(), clientIp);
+    log.info("Logout request for user ID={} from ip={}", currentUser.getId(), clientIp);
 
     tokenService.revokeTokenById(refreshTokenId);
     activityService.logActivity(Action.LOGOUT, currentUser.getId(), clientIp);
 
     log.info("Logout successful for userId={}", currentUser.getId());
-    return ResponseBuilder.success("User logged out successfully");
-
+    return ServiceResponse.success("Logout successfully");
   }
 
   @Override
@@ -160,8 +152,7 @@ public class IdentityServiceImpl implements IdentityService {
 
     String clientIp = RequestContext.getClientIp();
     AuthenticatedUser currentUser = AuthUtil.getCurrentUserOrThrow();
-    log.info("New refresh token request by user ID= {} from ip={}",
-        currentUser.getId(), clientIp);
+    log.info("New refresh token request by user ID= {} from ip={}", currentUser.getId(), clientIp);
     Jwt jwt = currentUser.getCurrentJwt();
 
     String oldRefreshTokenValue = jwt.getTokenValue();
@@ -195,24 +186,22 @@ public class IdentityServiceImpl implements IdentityService {
             userDto.getRolesAsList(), userDto.getPermissionsAsList(), refreshToken.getId());
 
     // Map response DTO
-    RefreshTokenResponse refreshTokenResponse =
-        UserMapper.toResponse(generatedAccessToken.getValue(), generatedAccessToken.getExpiresIn(),
-            generatedRefreshToken.getValue());
+    RefreshTokenResponse data = RefreshTokenResponse.from(generatedAccessToken.getValue(),
+        generatedAccessToken.getExpiresIn(), generatedRefreshToken.getValue());
 
     log.info("New Refresh token fetching successful by userId={}", userDto.getId());
 
-    return ResponseBuilder.successWithPayload("New Refresh token fetched successful",
-        refreshTokenResponse);
+    return ServiceResponse.success(data, "Refresh token fetched successfully");
   }
 
 
   @Override
-  public ServiceResponse<?> forgotPassword(ServiceRequest<ForgotPasswordRequest> serviceRequest) {
+  public ServiceResponse<Void> forgotPassword(
+      ServiceRequest<PasswordForgotRequest> serviceRequest) {
 
     String clientIp = RequestContext.getClientIp();
-    ForgotPasswordRequest payload = serviceRequest.getPayload();
-
-    String email = payload.getEmail().trim().toLowerCase();
+    PasswordForgotRequest passwordForgotRequest = serviceRequest.payload();
+    String email = passwordForgotRequest.getEmail().trim().toLowerCase();
 
     log.info("Request from ip={} for email={}", clientIp, email);
 
@@ -224,7 +213,8 @@ public class IdentityServiceImpl implements IdentityService {
        * Do nothing and return a successful response. Do not expose this information to the client,
        * as it would enable user-enumeration attacks.
        */
-      return ResponseBuilder.success("If the email exists, a password reset link has been sent.");
+      return ServiceResponse
+          .success("If an account with this email exists, a password reset link has been sent.");
     }
 
     UserDto userDto = userDtoOpt.get();
@@ -233,35 +223,31 @@ public class IdentityServiceImpl implements IdentityService {
         VerificationChannel.EMAIL);
 
     log.info("Forgot password flow triggered for userId={}", userDto.getId());
-
-    return ResponseBuilder.success("If the email exists, a password reset link has been sent.");
+    return ServiceResponse.success("Forgot password requested successfully");
   }
 
 
   @Override
-  public ServiceResponse<?> resetPassword(ServiceRequest<ResetPasswordRequest> serviceRequest) {
+  public ServiceResponse<Void> resetPassword(ServiceRequest<PasswordResetRequest> serviceRequest) {
 
-    ResetPasswordRequest payload = serviceRequest.getPayload();
-    log.info("Password reset attempt for email={}",
-        payload.getEmail());
+    PasswordResetRequest passwordResetRequest = serviceRequest.payload();
+    log.info("Password reset attempt for email={}", passwordResetRequest.getEmail());
 
     // Finding user
-    UserDto userDto = userService.findByEmail(payload.getEmail()).orElseThrow(() -> {
+    UserDto userDto = userService.findByEmail(passwordResetRequest.getEmail()).orElseThrow(() -> {
       log.debug("Reset password requested for non-existing email");
       // Do not expose details to user as it would enable user-enumeration attacks
       throw new InvalidTokenException("Invalid or expired password reset token");
     });
 
     // Verifying password-reset token
-    verificationService.verifyCode(userDto.getId(), payload.getToken());
+    verificationService.verifyCode(userDto.getId(), passwordResetRequest.getToken());
 
     // Updating password
-    userService.updatePassword(userDto.getId(), payload.getNewPassword());
+    userService.updatePassword(userDto.getId(), passwordResetRequest.getNewPassword());
 
-    log.info("Password reset successful for userId={}",
-        userDto.getId());
-
-    return ResponseBuilder.success("Password reset successfully");
+    log.info("Password reset successful for userId={}", userDto.getId());
+    return ServiceResponse.success("Password reset requested successfully");
   }
 
 

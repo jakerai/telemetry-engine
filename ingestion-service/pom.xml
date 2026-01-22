@@ -169,7 +169,22 @@
 			<version>${spring-grpc.version}</version>
 			<scope>test</scope>
 		</dependency>
-
+      <!-- rsocket protobuf based start -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-rsocket</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>com.google.protobuf</groupId>
+			<artifactId>protobuf-java</artifactId>
+			<version>4.28.2</version>
+		</dependency>
+		<dependency>
+			<groupId>com.google.protobuf</groupId>
+			<artifactId>protobuf-java-util</artifactId>
+			<version>4.28.2</version>
+		</dependency>
+        <!-- rsocket protobuf based end -->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-test</artifactId>
@@ -214,7 +229,7 @@
 				<configuration>
 					<!-- Protoc compiler -->
 					<protocArtifact>
-						com.google.protobuf:protoc:3.25.1:exe:${os.detected.classifier}
+						com.google.protobuf:protoc:4.28.2:exe:${os.detected.classifier}
 					</protocArtifact>
 
 					<!-- gRPC plugin -->

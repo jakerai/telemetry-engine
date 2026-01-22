@@ -11,7 +11,7 @@ import tools.jackson.databind.ObjectMapper;
 import tools.jackson.databind.type.CollectionType;
 
 @Slf4j
-public class MapperUtil {
+public class JsonMapperUtil {
 
   private static final ObjectMapper objectMapper = new ObjectMapper();
 
