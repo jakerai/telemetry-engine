@@ -43,7 +43,8 @@ public class ProcessorImpl implements Processor {
     }
 
     return Mono
-        .fromCallable(() -> JsonMapperUtil.deserializeJsonToList(jsonArrayValue, MessageEvent.class))
+        .fromCallable(
+            () -> JsonMapperUtil.deserializeJsonToList(jsonArrayValue, MessageEvent.class))
         .subscribeOn(Schedulers.boundedElastic()).flatMap(events -> {
 
           if (events.isEmpty()) {
@@ -85,53 +86,59 @@ public class ProcessorImpl implements Processor {
   private Mono<Void> upsertRedisState(MessageEvent event) {
     String assetKey = H3Constants.KEY_ASSET + event.getAssetId();
 
-    // Getting H3 index of the resolution as a String
-    // Convert lat/lon to H3 index as Long
-    Long h3IndexLong = h3Service.toH3CellAddress(event.getLatitude(), event.getLongitude(),
-        H3Constants.H3_RESOLUTION_8);
-
-    // Convert H3 index to String for Redis storage
+    // Convert lat/lon to H3 index
+    Long h3IndexLong = h3Service.toH3CellAddress(
+            event.getLatitude(), event.getLongitude(), H3Constants.H3_RESOLUTION_8);
     String newH3 = h3IndexLong.toString();
 
-    // Fetching current hash to check if the asset moved to a new hexagon
-    return redisService.getHash(assetKey, Object.class).defaultIfEmpty(Map.of())
-        .flatMap(oldState -> {
-          // Reading the old H3 index from the previous state
-          String oldH3 = (String) oldState.get("h3Index");
+    return redisService.getHash(assetKey, Object.class)
+            .defaultIfEmpty(Map.of())
+            .flatMap(oldState -> {
 
-          // Mapping DTO to Map for Redis Hash storage
-          Map<String, Object> fields = JsonMapperUtil.toMap(event);
-          fields.put("h3Index", newH3);
+                // Previous H3 index
+                String oldH3 = (String) oldState.get("h3Index");
 
-          // Updating the Asset Snapshot in Redis
-          Mono<Void> updateHash = redisService.putHash(assetKey, fields).then();
+                // Prepare asset hash with updated fields
+                Map<String, Object> fields = JsonMapperUtil.toMap(event);
+                fields.put("h3Index", newH3);
+                fields.put("assetTypeId", event.getAssetTypeId()); // store type for later filtering
 
-          // Handling H3 Set Membership (Move Logic)
-          Mono<Void> cellMovement;
-          if (oldH3 != null && !oldH3.equals(newH3)) {
-            // Asset moved: Removing from old set, add to new set
-            cellMovement = Mono.when(
-                redisService.removeFromSet(H3Constants.KEY_H3 + oldH3,
-                    event.getAssetId().toString()),
-                redisService.addToSet(H3Constants.KEY_H3 + newH3, event.getAssetId().toString()));
-          } else {
-            // Asset in same cell (or new asset): Just ensure it's in the current set
-            cellMovement = redisService
-                .addToSet(H3Constants.KEY_H3 + newH3, event.getAssetId().toString()).then();
-          }
+                // Update asset hash
+                Mono<Void> updateHash = redisService.putHash(assetKey, fields).then();
 
-          // Broadcast real-time update to the H3-specific channel
-          Mono<Void> notify = redisService.publish(H3Constants.STREAM + newH3, fields).then();
+                // Update H3 sets partitioned by asset type
+                String newH3SetKey = "h3:type:" + event.getAssetTypeId() + ":" + newH3;
+                Mono<Void> cellMovement;
+                if (oldH3 != null && !oldH3.equals(newH3)) {
+                    // Remove from old H3 set(s) by type if it exists
+                    Long oldTypeId = oldState.containsKey("assetTypeId")
+                            ? Long.parseLong(oldState.get("assetTypeId").toString())
+                            : event.getAssetTypeId();
+                    String oldH3SetKey = "h3:type:" + oldTypeId + ":" + oldH3;
 
-          return Mono.when(updateHash, cellMovement, notify);
-        });
-  }
+                    cellMovement = Mono.when(
+                            redisService.removeFromSet(oldH3SetKey, event.getAssetId().toString()),
+                            redisService.addToSet(newH3SetKey, event.getAssetId().toString())
+                    );
+                } else {
+                    // Add to current H3+type set
+                    cellMovement = redisService.addToSet(newH3SetKey, event.getAssetId().toString()).then();
+                }
 
+                // Publish update to H3+type channel
+                String channel = "stream:type:" + event.getAssetTypeId() + ":" + newH3;
+                Mono<Void> notify = redisService.publish(channel, fields).then();
+
+                // Execute all operations in parallel
+                return Mono.when(updateHash, cellMovement, notify);
+            });
+}
 
 
   private AssetLocationHistory toHistoryEntity(MessageEvent event) {
     return AssetLocationHistory.builder().assetId(event.getAssetId()).deviceTs(event.getDeviceTs())
-        .latitude(event.getLatitude()).longitude(event.getLongitude())
+        .operatorId(event.getOperatorId()).latitude(event.getLatitude())
+        .longitude(event.getLongitude())
         .location(Point.of(event.getLongitude(), event.getLatitude())).speed(event.getSpeed())
         .h3Index(h3Service.toH3CellAddress(event.getLatitude(), event.getLongitude(),
             H3Constants.H3_RESOLUTION_8))
@@ -139,13 +146,13 @@ public class ProcessorImpl implements Processor {
   }
 
   private AssetCurrentLocation toCurrentEntity(MessageEvent event) {
-    return AssetCurrentLocation.builder().assetId(event.getAssetId())
-        .currentLat(event.getLatitude()).currentLon(event.getLongitude())
+    return AssetCurrentLocation.builder().assetId(event.getAssetId()).deviceTs(event.getDeviceTs())
+        .operatorId(event.getOperatorId()).latitude(event.getLatitude())
+        .longitude(event.getLongitude())
         .location(Point.of(event.getLongitude(), event.getLatitude())).speed(event.getSpeed())
         .heading(event.getHeading())
         .h3Index(h3Service.toH3CellAddress(event.getLatitude(), event.getLongitude(),
             H3Constants.H3_RESOLUTION_8))
-        .deviceTs(event.getDeviceTs())
         .processedAt(event.getProcessedAt() != null ? event.getProcessedAt() : Instant.now())
         .build();
   }

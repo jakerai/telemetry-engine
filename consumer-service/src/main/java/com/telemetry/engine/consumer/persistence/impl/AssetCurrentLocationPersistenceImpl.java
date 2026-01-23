@@ -77,31 +77,42 @@ public class AssetCurrentLocationPersistenceImpl implements AssetCurrentLocation
    */
   @Override
   public Mono<Void> upsert(AssetCurrentLocation loc) {
-    String sql =
-        """
-            INSERT INTO telemetry.asset_current_location
-                (asset_id, current_lat, current_lon, location, h3_index, speed, heading, device_ts, processed_at)
-            VALUES ($1, $2, $3, ST_SetSRID(ST_MakePoint($3, $2), 4326)::geography, $4, $5, $6, $7, $8)
-            ON CONFLICT (asset_id)
-            DO UPDATE SET
-                current_lat  = EXCLUDED.current_lat,
-                current_lon  = EXCLUDED.current_lon,
-                location     = EXCLUDED.location,
-                h3_index     = EXCLUDED.h3_index,
-                speed        = EXCLUDED.speed,
-                heading      = EXCLUDED.heading,
-                device_ts    = EXCLUDED.device_ts,
-                processed_at = EXCLUDED.processed_at
-            WHERE EXCLUDED.device_ts > asset_current_location.device_ts
-            """;
 
-    return databaseClient.sql(sql).bind("$1", loc.getAssetId()).bind("$2", loc.getCurrentLat())
-        .bind("$3", loc.getCurrentLon())
-        .bind("$4", loc.getH3Index() != null ? loc.getH3Index() : null)
-        .bind("$5", loc.getSpeed() != null ? loc.getSpeed() : null)
-        .bind("$6", loc.getHeading() != null ? loc.getHeading() : null)
-        .bind("$7", loc.getDeviceTs() != null ? loc.getDeviceTs() : null)
-        .bind("$8", loc.getProcessedAt() != null ? loc.getProcessedAt() : null).then();
+    String sql = """
+        INSERT INTO telemetry.asset_current_location
+            (asset_id, device_ts, operator_id, lon, lat, location,
+             h3_index, speed, heading, processed_at)
+        VALUES (
+            $1, $2, $3, $4, $5,
+            ST_SetSRID(ST_MakePoint($4, $5), 4326)::geography,
+            $6, $7, $8, $9
+        )
+        ON CONFLICT (asset_id)
+        DO UPDATE SET
+            device_ts   = EXCLUDED.device_ts,
+            operator_id = EXCLUDED.operator_id,
+            lon         = EXCLUDED.lon,
+            lat         = EXCLUDED.lat,
+            location    = EXCLUDED.location,
+            h3_index    = EXCLUDED.h3_index,
+            speed       = EXCLUDED.speed,
+            heading     = EXCLUDED.heading,
+            processed_at = EXCLUDED.processed_at
+        WHERE EXCLUDED.device_ts > telemetry.asset_current_location.device_ts
+        """;
+
+    return databaseClient.sql(sql)
+        .bind("$1", loc.getAssetId())
+        .bind("$2", loc.getDeviceTs())
+        .bind("$3", loc.getOperatorId())
+        .bind("$4", loc.getLongitude())
+        .bind("$5", loc.getLatitude())
+        .bind("$6", loc.getH3Index())
+        .bind("$7", loc.getSpeed())
+        .bind("$8", loc.getHeading())
+        .bind("$9", loc.getProcessedAt())
+        .then();
   }
+
 
 }

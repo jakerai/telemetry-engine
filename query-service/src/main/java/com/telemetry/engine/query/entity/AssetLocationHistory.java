@@ -24,7 +24,10 @@ public class AssetLocationHistory {
   @Column("asset_id")
   private Long assetId;
   
+  @Column("lat")
   private Double latitude;
+
+  @Column("lon")
   private Double longitude;
 
   @Column("location") 
@@ -38,6 +41,9 @@ public class AssetLocationHistory {
   
   @Column("heading")
   private Double heading;
+  
+  @Column("operator_id")
+  private Long operatorId;
   
   @Column("processed_at")
   private Instant processedAt;

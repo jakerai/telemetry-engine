@@ -18,23 +18,34 @@ import lombok.Setter;
 @Table(name = "telemetry.asset_location_history")
 public class AssetLocationHistory {
 
+  @Column("asset_id")
+  private Long assetId;
+  
   @Column("device_ts")
   private Instant deviceTs; // time-series partition key
   
-  private Long assetId;
+  @Column("operator_id")
+  private Long operatorId;
   
-  private Double latitude;
+  @Column("lon")
   private Double longitude;
+    
+  @Column("lat")
+  private Double latitude;
 
   @Column("location") 
-  private Point location; 
+  private Point location;
   
   @Column("h3_index")
   private Long h3Index;
 
+  @Column("speed")
   private Double speed;
-  private Double heading;
   
+  @Column("heading")
+  private Double heading;
+    
+  @Column("processed_at")
   private Instant processedAt;
 }
  

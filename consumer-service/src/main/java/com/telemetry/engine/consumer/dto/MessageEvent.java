@@ -17,6 +17,7 @@ import lombok.ToString;
 public class MessageEvent {
 
   private Long assetId;
+  private Long assetTypeId;
   private Long operatorId;
   private double latitude;
   private double longitude;

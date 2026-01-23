@@ -7,9 +7,9 @@ import lombok.Getter;
 @Builder
 public class NearbyAssetsRequest {
 
-  private String assetType;
+  private Long assetTypeId;
   private double lat;
   private double lon;
   private int radiusMeters;
-  
+
 }

@@ -27,7 +27,7 @@ public class IngestionServiceGrpcImpl extends IngestionServiceGrpc.IngestionServ
     try {
       MessageEventListGrpc eventListGrpc = request.getPayload();
       log.info("RECEIVED={}", request);
-      
+
       List<MessageEvent> messageEvents =
           eventListGrpc.getEventsList().stream().map(this::toMessageEvent).toList();
 
@@ -49,9 +49,9 @@ public class IngestionServiceGrpcImpl extends IngestionServiceGrpc.IngestionServ
 
   private MessageEvent toMessageEvent(MessageEventRequestGrpc grpcEvent) {
     return MessageEvent.builder().requestId(grpcEvent.getRequestId())
-        .assetId(grpcEvent.getAssetId()).latitude(grpcEvent.getLatitude())
-        .longitude(grpcEvent.getLongitude()).speed(grpcEvent.getSpeed())
-        .heading(grpcEvent.getHeading())
+        .assetId(grpcEvent.getAssetId()).assetTypeId(grpcEvent.getAssetTypeId())
+        .latitude(grpcEvent.getLatitude()).longitude(grpcEvent.getLongitude())
+        .speed(grpcEvent.getSpeed()).heading(grpcEvent.getHeading())
         .deviceTs(
             grpcEvent.hasDeviceTs() ? Instant.ofEpochSecond(grpcEvent.getDeviceTs().getSeconds(),
                 grpcEvent.getDeviceTs().getNanos()) : null)

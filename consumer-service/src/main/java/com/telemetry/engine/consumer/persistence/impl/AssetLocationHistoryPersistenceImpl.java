@@ -36,39 +36,44 @@ public class AssetLocationHistoryPersistenceImpl implements AssetLocationHistory
    * Insert a single AssetLocationHistory into DB.
    */
   private Mono<Void> insert(AssetLocationHistory event) {
-    String sql =
-        """
-            INSERT INTO telemetry.asset_location_history
-                (device_ts, asset_id, latitude, longitude, location, h3_index, speed, heading, processed_at)
-            VALUES ($1, $2, $3, $4, ST_SetSRID(ST_MakePoint($4, $3), 4326)::geography, $5, $6, $7, $8)
-            """;
 
-    var spec =
-        databaseClient.sql(sql).bind("$1", event.getDeviceTs()).bind("$2", event.getAssetId())
-            .bind("$3", event.getLatitude()).bind("$4", event.getLongitude());
+    String sql = """
+        INSERT INTO telemetry.asset_location_history
+            (asset_id, device_ts, operator_id, lon, lat, location,
+             h3_index, speed, heading, processed_at)
+        VALUES (
+            $1, $2, $3, $4, $5,
+            ST_SetSRID(ST_MakePoint($4, $5), 4326)::geography,
+            $6, $7, $8, $9
+        )
+        """;
+
+    var spec = databaseClient.sql(sql).bind("$1", event.getAssetId())
+        .bind("$2", event.getDeviceTs()).bind("$3", event.getOperatorId())
+        .bind("$4", event.getLongitude()).bind("$5", event.getLatitude());
 
     if (event.getH3Index() != null) {
-      spec = spec.bind("$5", event.getH3Index());
+      spec = spec.bind("$6", event.getH3Index());
     } else {
-      spec = spec.bindNull("$5", String.class);
+      spec = spec.bindNull("$6", String.class);
     }
 
     if (event.getSpeed() != null) {
-      spec = spec.bind("$6", event.getSpeed());
-    } else {
-      spec = spec.bindNull("$6", Double.class);
-    }
-
-    if (event.getHeading() != null) {
-      spec = spec.bind("$7", event.getHeading());
+      spec = spec.bind("$7", event.getSpeed());
     } else {
       spec = spec.bindNull("$7", Double.class);
     }
 
-    if (event.getProcessedAt() != null) {
-      spec = spec.bind("$8", event.getProcessedAt());
+    if (event.getHeading() != null) {
+      spec = spec.bind("$8", event.getHeading());
     } else {
-      spec = spec.bindNull("$8", java.time.Instant.class);
+      spec = spec.bindNull("$8", Double.class);
+    }
+
+    if (event.getProcessedAt() != null) {
+      spec = spec.bind("$9", event.getProcessedAt());
+    } else {
+      spec = spec.bindNull("$9", java.time.Instant.class);
     }
 
     return spec.then();

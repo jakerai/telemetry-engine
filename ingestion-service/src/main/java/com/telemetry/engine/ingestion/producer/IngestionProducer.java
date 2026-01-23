@@ -53,7 +53,7 @@ public class IngestionProducer {
     try {
       // Converting entire batch to JSON array string
       String batchJson = JsonMapperUtil.serializeToJson(batch);
-
+      log.info("RECEIVED={}", batchJson);
       // Creating Kafka record
       ProducerRecord<String, String> record = new ProducerRecord<>(topic, key, batchJson);
       SenderRecord<String, String, List<MessageEvent>> senderRecord =

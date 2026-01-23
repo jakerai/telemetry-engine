@@ -1,7 +1,7 @@
 package com.telemetry.engine.ingestion.dto;
 
 import java.time.Instant;
-import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonGetter;
 import com.telemetry.engine.common.context.RequestContext;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -10,39 +10,30 @@ import lombok.Setter;
 
 @Getter
 @Setter
-@Builder
+@Builder(toBuilder = true)
 @AllArgsConstructor
 public class MessageEvent {
-
-  @Builder.Default
-  private String requestId = RequestContext.getTraceId();
+  
+  private String requestId;
   private Long assetId;
-  private double latitude;
+  private Long assetTypeId;
+  private Long operatorId;
   private double longitude;
+  private double latitude;
   private double speed;
   private double heading;
   private Instant deviceTs;
-  @Builder.Default
-  private Instant processedAt = Instant.now();
+  private Instant processedAt;
 
-  // No-args constructor for Jackson
-  public MessageEvent() {
-    // Ensure defaults even if deserialized
-    if (this.requestId == null)
-      this.requestId = RequestContext.getTraceId();
-    if (this.processedAt == null)
-      this.processedAt = Instant.now();
+ 
+  @JsonGetter("requestId")
+  public String getRequestIdSafe() {
+    return requestId != null ? requestId : RequestContext.getTraceId();
   }
 
-  // Custom setter for Jackson deserialization
-  @JsonProperty("requestId")
-  public void setRequestIdSafe(String requestId) {
-    this.requestId = (requestId != null) ? requestId : RequestContext.getTraceId();
-  }
-
-  @JsonProperty("processedAt")
-  public void setProcessedAtSafe(Instant processedAt) {
-    this.processedAt = (processedAt != null) ? processedAt : Instant.now();
+  @JsonGetter("processedAt")
+  public Instant getProcessedAtSafe() {
+    return processedAt != null ? processedAt : Instant.now();
   }
 
 }

@@ -11,14 +11,15 @@ public class AssetCreateRequest {
 
   private String name;
   private String model;
-  private Long typeId;
-  private AssetStatus status;
+  private Long assetTypeId;
   private Long ownerId;
-  private Long operatorId;
+  private String assetCode;
+  private String serialNumber;
 
   public static Asset from(AssetCreateRequest createAsset) {
     return Asset.builder().name(createAsset.getName()).model(createAsset.getModel())
-        .typeId(createAsset.getTypeId()).operatorId(createAsset.getOperatorId())
+        .assetCode(createAsset.getAssetCode()).serialNumber(createAsset.getSerialNumber())
+        .status(AssetStatus.ACTIVE).typeId(createAsset.getAssetTypeId())
         .ownerId(createAsset.getOwnerId()).build();
   }
 

@@ -69,31 +69,39 @@ CREATE TABLE IF NOT EXISTS telemetry.asset (
     name VARCHAR(100) NOT NULL,
     model VARCHAR(100),
     type_id BIGINT NOT NULL REFERENCES telemetry.asset_type(id),
+    asset_code VARCHAR(100),
+    serial_number VARCHAR(100),
     status VARCHAR(50),
     owner_id BIGINT,
-    operator_id BIGINT,
     created_by BIGINT,
     modified_by BIGINT,
     created_at TIMESTAMPTZ DEFAULT now(),
     modified_at TIMESTAMPTZ
 );
 
+CREATE INDEX IF NOT EXISTS idx_asset_name ON telemetry.asset(name);
+CREATE INDEX IF NOT EXISTS idx_asset_model ON telemetry.asset(model);
 CREATE INDEX IF NOT EXISTS idx_asset_type_id ON telemetry.asset(type_id);
-CREATE INDEX IF NOT EXISTS idx_asset_owner_id ON telemetry.asset(owner_id);
-CREATE INDEX IF NOT EXISTS idx_asset_operator_id ON telemetry.asset(operator_id);
+CREATE INDEX IF NOT EXISTS idx_asset_asset_code ON telemetry.asset(asset_code);
+CREATE INDEX IF NOT EXISTS idx_asset_serial_number ON telemetry.asset(serial_number);
+CREATE INDEX IF NOT EXISTS idx_asset_owner_id_created_at_desc ON telemetry.asset (owner_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_asset_created_by_created_at_desc ON telemetry.asset (created_by, created_at DESC);
+
+
 
 -- =======================================================
 -- 5. Asset Current Location
 -- =======================================================
 CREATE TABLE IF NOT EXISTS telemetry.asset_current_location (
     asset_id BIGINT PRIMARY KEY REFERENCES telemetry.asset(id) ON DELETE CASCADE,
-    current_lat DOUBLE PRECISION NOT NULL,
-    current_lon DOUBLE PRECISION NOT NULL,
+    device_ts TIMESTAMPTZ NOT NULL,
+    operator_id BIGINT NOT NULL,
+    lat DOUBLE PRECISION NOT NULL,
+    lon DOUBLE PRECISION NOT NULL,
     location GEOGRAPHY(Point, 4326) NOT NULL,
     h3_index BIGINT,
     speed DOUBLE PRECISION,
     heading DOUBLE PRECISION,
-    device_ts TIMESTAMPTZ NOT NULL,
     processed_at TIMESTAMPTZ,
     created_by BIGINT,
     modified_by BIGINT,
@@ -101,21 +109,20 @@ CREATE TABLE IF NOT EXISTS telemetry.asset_current_location (
     modified_at TIMESTAMPTZ
 );
 
-CREATE INDEX IF NOT EXISTS idx_asset_current_location_geo
-    ON telemetry.asset_current_location USING GIST(location);
-CREATE INDEX IF NOT EXISTS idx_asset_current_location_h3_index
-    ON telemetry.asset_current_location(h3_index);
-CREATE INDEX IF NOT EXISTS idx_asset_current_location_device_ts
-    ON telemetry.asset_current_location(device_ts);
+CREATE INDEX IF NOT EXISTS idx_asset_current_location_geo ON telemetry.asset_current_location USING GIST(location);
+CREATE INDEX IF NOT EXISTS idx_asset_current_location_operator_id ON telemetry.asset_current_location(operator_id);
+CREATE INDEX IF NOT EXISTS idx_asset_current_location_h3_index ON telemetry.asset_current_location(h3_index);
+CREATE INDEX IF NOT EXISTS idx_asset_current_location_device_ts ON telemetry.asset_current_location(device_ts);
 
 -- =======================================================
 -- 6. Asset Location Event (time-series)
 -- =======================================================
 CREATE TABLE IF NOT EXISTS telemetry.asset_location_history (
-    device_ts TIMESTAMPTZ NOT NULL,
     asset_id BIGINT NOT NULL REFERENCES telemetry.asset(id) ON DELETE CASCADE,
-    latitude DOUBLE PRECISION NOT NULL,
-    longitude DOUBLE PRECISION NOT NULL,
+    device_ts TIMESTAMPTZ NOT NULL,
+    operator_id BIGINT NOT NULL,
+    lat DOUBLE PRECISION NOT NULL,
+    lon DOUBLE PRECISION NOT NULL,
     location GEOGRAPHY(Point, 4326) NOT NULL,
     h3_index BIGINT,
     speed DOUBLE PRECISION,
@@ -131,14 +138,10 @@ SELECT create_hypertable(
     if_not_exists => TRUE
 );
 
-CREATE INDEX IF NOT EXISTS idx_asset_location_history_asset_id
-    ON telemetry.asset_location_history(asset_id);
-CREATE INDEX IF NOT EXISTS idx_asset_location_history_device_ts
-    ON telemetry.asset_location_history(device_ts DESC);
-CREATE INDEX IF NOT EXISTS idx_asset_location_history_geo
-    ON telemetry.asset_location_history USING GIST(location);
-CREATE INDEX IF NOT EXISTS idx_asset_location_history_h3_index
-    ON telemetry.asset_location_history(h3_index);
+CREATE INDEX IF NOT EXISTS idx_asset_location_history_asset_id ON telemetry.asset_location_history(asset_id);
+CREATE INDEX IF NOT EXISTS idx_asset_location_history_device_ts ON telemetry.asset_location_history(device_ts DESC);
+CREATE INDEX IF NOT EXISTS idx_asset_location_history_geo ON telemetry.asset_location_history USING GIST(location);
+CREATE INDEX IF NOT EXISTS idx_asset_location_history_h3_index ON telemetry.asset_location_history(h3_index);
 -- Compression policy for events older than 7 days
 DO $$
 BEGIN

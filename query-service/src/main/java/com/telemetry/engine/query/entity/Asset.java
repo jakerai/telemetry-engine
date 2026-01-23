@@ -24,6 +24,12 @@ public class Asset extends BaseEntity {
   @Column("model")
   private String model;
   
+  @Column("asset_code")
+  private String assetCode;
+  
+  @Column("serial_number")
+  private String serialNumber;
+  
   @Column("type_id")
   private Long typeId;
       
@@ -32,8 +38,5 @@ public class Asset extends BaseEntity {
   
   @Column("owner_id")
   private Long ownerId;
- 
-  @Column("operator_id")
-  private Long operatorId;
   
 }

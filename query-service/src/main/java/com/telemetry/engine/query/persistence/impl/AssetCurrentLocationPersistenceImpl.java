@@ -1,10 +1,9 @@
 package com.telemetry.engine.query.persistence.impl;
 
+import java.time.Instant;
 import org.springframework.r2dbc.core.DatabaseClient;
 import org.springframework.stereotype.Component;
-import com.telemetry.engine.query.dto.response.AssetLocation;
-import com.telemetry.engine.query.entity.AssetCurrentLocation;
-import com.telemetry.engine.query.enums.AssetStatus;
+import com.telemetry.engine.query.dto.response.NearbyAsset;
 import com.telemetry.engine.query.persistence.AssetCurrentLocationPersistence;
 import io.r2dbc.spi.Row;
 import lombok.RequiredArgsConstructor;
@@ -21,81 +20,86 @@ public class AssetCurrentLocationPersistenceImpl implements AssetCurrentLocation
 
 
   @Override
-  public Flux<AssetLocation> findNearby(String assetType, double lat, double lon,
-      double radiusMeters) {
-    String sql = """
-            SELECT acl.asset_id     AS asset_id,
-                   a.name           AS asset_name,
-                   a.model          AS asset_model,
-                   a.status         AS asset_status,
-                   acl.current_lat  AS current_lat,
-                   acl.current_lon  AS current_lon,
-                   acl.speed        AS speed,
-                   acl.heading      AS heading,
-                   acl.device_ts    AS device_ts
-            FROM telemetry.asset_current_location acl
-            INNER JOIN telemetry.asset a ON a.id = acl.asset_id
-            INNER JOIN telemetry.asset_type at ON at.id = a.type_id
-            WHERE at.code = $1
-              AND ST_DWithin(
-                    acl.location::geography,
-                    ST_SetSRID(ST_MakePoint($2, $3), 4326)::geography,
-                    $4
-              )
-            ORDER BY ST_Distance(
-                    acl.location::geography,
-                    ST_SetSRID(ST_MakePoint($2, $3), 4326)::geography
-              ) ASC
-        """;
+  public Flux<NearbyAsset> findNearby(Long assetTypeId, double lat, double lon,
+                                      double radiusMeters) {
+      String sql = """
+              SELECT acl.asset_id          AS asset_id,
+                     at.code               AS asset_type,
+                     acl.operator_id         AS operator_id,
+                     acl.lat       AS latitude,
+                     acl.lon       AS longitude,
+                     acl.speed             AS speed,
+                     acl.heading           AS heading,
+                     acl.device_ts         AS device_ts,
+                     ST_Distance(
+                         acl.location::geography,
+                         ST_SetSRID(ST_MakePoint($2, $3), 4326)::geography
+                     ) AS distance_meters
+              FROM telemetry.asset_current_location acl
+              INNER JOIN telemetry.asset a ON a.id = acl.asset_id
+              INNER JOIN telemetry.asset_type at ON at.id = a.type_id
+              WHERE at.id = $1
+                AND ST_DWithin(
+                      acl.location::geography,
+                      ST_SetSRID(ST_MakePoint($2, $3), 4326)::geography,
+                      $4
+                )
+              ORDER BY distance_meters ASC
+          """;
 
-    return databaseClient.sql(sql).bind("$1", assetType).bind("$2", lon).bind("$3", lat)
-        .bind("$4", radiusMeters).<AssetLocation>map((row, meta) -> mapRowToDto(row)).all();
+      return databaseClient.sql(sql)
+              .bind("$1", assetTypeId)
+              .bind("$2", lon)
+              .bind("$3", lat)
+              .bind("$4", radiusMeters)
+              .<NearbyAsset>map((row, meta) -> mapRowToNearbyAsset(row))
+              .all();
   }
 
   @Override
-  public Mono<AssetLocation> findByAssetId(Long assetId) {
-    String sql = """
-            SELECT
-                a.id            AS asset_id,
-                a.name          AS asset_name,
-                a.model         AS asset_model,
-                a.status        AS asset_status,
-                acl.current_lat AS current_lat,
-                acl.current_lon AS current_lon,
-                acl.speed       AS speed,
-                acl.heading     AS heading,
-                acl.device_ts   AS device_ts
-            FROM telemetry.asset_current_location acl
-            INNER JOIN telemetry.asset a ON a.id = acl.asset_id
-            WHERE a.id = $1
-        """;
+  public Mono<NearbyAsset> findByAssetId(Long assetId) {
+      String sql = """
+              SELECT acl.asset_id          AS asset_id,
+                     at.code               AS asset_type,
+                     acl.operator_id         AS operator_id,
+                     acl.current_lat       AS latitude,
+                     acl.current_lon       AS longitude,
+                     acl.speed             AS speed,
+                     acl.heading           AS heading,
+                     acl.device_ts         AS device_ts,
+                     0.0                   AS distance_meters
+              FROM telemetry.asset_current_location acl
+              INNER JOIN telemetry.asset a ON a.id = acl.asset_id
+              INNER JOIN telemetry.asset_type at ON at.id = a.type_id
+              WHERE a.id = $1
+          """;
 
-    return databaseClient.sql(sql).bind("$1", assetId)
-        .<AssetLocation>map((row, meta) -> mapRowToDto(row)).one();
+      return databaseClient.sql(sql)
+              .bind("$1", assetId)
+              .<NearbyAsset>map((row, meta) -> mapRowToNearbyAsset(row))
+              .one();
   }
 
-  private AssetLocation mapRowToDto(Row row) {
+  private NearbyAsset mapRowToNearbyAsset(Row row) {
+      Long assetId = row.get("asset_id", Long.class);
+      String assetType = row.get("asset_type", String.class);
+      Long operatorId = row.get("operator_id", Long.class);
+      double latitude = row.get("latitude", Double.class);
+      double longitude = row.get("longitude", Double.class);
+      double distanceMeters = row.get("distance_meters", Double.class);
+      double speed = getSafeDouble(row, "speed");
+      double heading = getSafeDouble(row, "heading");
+      boolean moving = speed > 0.0;
+      Instant deviceTs = row.get("device_ts", Instant.class);
 
-    String statusStr = row.get("asset_status", String.class);
-    AssetStatus status = (statusStr != null) ? AssetStatus.valueOf(statusStr) : AssetStatus.UNKNOWN;
-
-    return AssetLocation.builder().assetId(row.get("asset_id", Long.class))
-      //  .name(row.get("asset_name", String.class)).model(row.get("asset_model", String.class))
-      //  .status(status).currentLat(row.get("current_lat", Double.class))
-      //  .currentLon(row.get("current_lon", Double.class)).speed(getSafeDouble(row, "speed"))
-       // .heading(getSafeDouble(row, "heading")).deviceTs(row.get("device_ts", Instant.class))
-        .build();
+      return new NearbyAsset(assetId, assetType, operatorId, latitude, longitude,
+                             distanceMeters, moving, speed, heading, deviceTs);
   }
 
   private Double getSafeDouble(Row row, String column) {
-    Double val = row.get(column, Double.class);
-    return (val != null) ? val : 0.0;
+      Double val = row.get(column, Double.class);
+      return (val != null) ? val : 0.0;
   }
 
-  @Override
-  public Mono<AssetLocation> save(AssetCurrentLocation asset) {
-    // TODO Auto-generated method stub
-    return null;
-  }
 
 }

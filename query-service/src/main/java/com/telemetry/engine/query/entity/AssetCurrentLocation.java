@@ -29,11 +29,11 @@ public class AssetCurrentLocation {
   @Column("asset_id")
   private Long assetId;
 
-  @Column("current_lat")
-  private Double currentLat;
+  @Column("lat")
+  private Double latitude;
 
-  @Column("current_lon")
-  private Double currentLon;
+  @Column("lon")
+  private Double longitude;
 
   @Column("location")
   private Point location;
@@ -47,6 +47,9 @@ public class AssetCurrentLocation {
 
   @Column("heading")
   private Double heading;
+  
+  @Column("operator_id")
+  private Long operatorId;
 
   @Column("device_ts")
   private Instant deviceTs;

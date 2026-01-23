@@ -21,8 +21,8 @@ public class H3Service {
   }
 
   /* Get k-ring neighboring hexes */
-  public List<String> kRing(String h3Index, int k) {
-    return h3.gridDisk(h3Index, k);
+  public List<Long> kRing(long centerH3, int k) {
+    return h3.gridDisk(centerH3, k);
   }
 
 

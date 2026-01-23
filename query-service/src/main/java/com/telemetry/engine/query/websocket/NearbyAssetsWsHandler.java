@@ -18,21 +18,20 @@ import reactor.core.publisher.Mono;
 public class NearbyAssetsWsHandler implements WebSocketHandler {
 
   private final AssetService assetService;
-  private final JsonMapperUtil mapperService;
 
 
   @Override
   public Mono<Void> handle(WebSocketSession session) {
     return session.receive().next() // Getting the first message containing the lat/lon/radius
-        .map(msg -> mapperService.deserializeFromJson(msg.getPayloadAsText(),
+        .map(msg -> JsonMapperUtil.deserializeFromJson(msg.getPayloadAsText(),
             NearbyAssetsRequest.class))
         .flatMap(req -> {
 
           // Stream nearby assets: snapshot + deltas + heartbeat
           Flux<WebSocketMessage> responseStream = assetService
-              .getNearbyAssets(req.getLat(), req.getLon(), req.getAssetType(),
+              .getNearbyAssets(req.getLat(), req.getLon(), req.getAssetTypeId(),
                   (int) req.getRadiusMeters())
-              .map(event -> mapperService.serializeToJson(event)) /* Map to JSON string */
+              .map(event -> JsonMapperUtil.serializeToJson(event)) /* Map to JSON string */
               .map(session::textMessage);
 
           /* Sending the stream to the WebSocket session */

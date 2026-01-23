@@ -28,31 +28,35 @@ public class AssetCurrentLocation {
   @Id
   @Column("asset_id")
   private Long assetId;
+    
+  @Column("device_ts")
+  private Instant deviceTs;
   
-  @Column("current_lat")
-  private Double currentLat;
-  
-  @Column("current_lon")
-  private Double currentLon;
+  @Column("operator_id")
+  private Long operatorId;
+
+  @Column("lat")
+  private Double latitude;
+
+  @Column("lon")
+  private Double longitude;
 
   @Column("location")
   private Point location;
-  
+
+  // For H3
   @Column("h3_index")
   private Long h3Index;
 
   @Column("speed")
   private Double speed;
-  
+
   @Column("heading")
   private Double heading;
   
-  @Column("device_ts")
-  private Instant deviceTs;
-  
   @Column("processed_at")
   private Instant processedAt;
-  
+
   @Column("created_by")
   private Long createdBy;
 
