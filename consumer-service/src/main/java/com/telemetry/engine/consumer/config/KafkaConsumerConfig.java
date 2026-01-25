@@ -8,7 +8,6 @@ import org.apache.kafka.common.serialization.StringDeserializer;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import com.telemetry.engine.common.geo.H3Service;
 import reactor.kafka.receiver.KafkaReceiver;
 import reactor.kafka.receiver.ReceiverOptions;
 
@@ -66,11 +65,6 @@ public class KafkaConsumerConfig {
   public KafkaReceiver<String, String> kafkaReceiver(ReceiverOptions<String, String> options) {
     return KafkaReceiver.create(options.subscription(Collections.singleton(topic)));
   }
-
-
-  @Bean
-  public H3Service h3Service() {
-    return new H3Service();
-  }
+ 
 
 }

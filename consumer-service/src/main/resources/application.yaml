@@ -20,7 +20,7 @@ spring:
       mode: always
 
 redis:
-  uri: redis://:Test321$$$@localhost:6379    
+  uri: redis://:Test321redis$@localhost:6379    
 
 kafka:
   bootstrap:

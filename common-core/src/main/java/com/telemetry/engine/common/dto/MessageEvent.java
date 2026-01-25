@@ -1,4 +1,4 @@
-package com.telemetry.engine.ingestion.dto;
+package com.telemetry.engine.common.dto;
 
 import java.time.Instant;
 import com.fasterxml.jackson.annotation.JsonGetter;
@@ -6,12 +6,14 @@ import com.telemetry.engine.common.context.RequestContext;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Getter
 @Setter
-@Builder(toBuilder = true)
+@Builder
 @AllArgsConstructor
+@NoArgsConstructor
 public class MessageEvent {
   
   private String requestId;

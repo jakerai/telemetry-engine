@@ -4,13 +4,13 @@ import com.telemetry.engine.query.entity.AssetType;
 import reactor.core.publisher.Mono;
 
 public interface AssetTypePersistence {
-  
-  Mono<AssetType> save(AssetType type);
 
-  Mono<Boolean> existsByCode(String code);
+  Mono<AssetType> save(AssetType assetType);
 
-  Mono<AssetType> findByCode(String code);
+  Mono<Boolean> existsByName(String name);
 
-  Mono<Long> findCategoryIdByCode(String code);
-  
+  Mono<AssetType> findByName(String name);
+
+  Mono<Long> findCategoryIdByName(String name);
+
 }

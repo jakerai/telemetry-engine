@@ -17,8 +17,8 @@ import lombok.experimental.SuperBuilder;
 @Table("telemetry.asset_type")
 public class AssetType extends BaseEntity {
   
-  @Column("code")
-  private String code;
+  @Column("name")
+  private String name;
   
   @Column("category_id")
   private Long categoryId;

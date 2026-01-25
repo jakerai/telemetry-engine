@@ -24,9 +24,6 @@ public class Asset extends BaseEntity {
   @Column("model")
   private String model;
   
-  @Column("asset_code")
-  private String assetCode;
-  
   @Column("serial_number")
   private String serialNumber;
   

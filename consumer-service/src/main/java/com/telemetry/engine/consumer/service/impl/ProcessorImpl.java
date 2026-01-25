@@ -3,13 +3,12 @@ package com.telemetry.engine.consumer.service.impl;
 import java.time.Instant;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Map;
 import org.springframework.stereotype.Service;
 import com.telemetry.engine.common.constansts.H3Constants;
+import com.telemetry.engine.common.dto.MessageEvent;
 import com.telemetry.engine.common.geo.H3Service;
 import com.telemetry.engine.common.mapper.JsonMapperUtil;
-import com.telemetry.engine.common.redis.RedisService;
-import com.telemetry.engine.consumer.dto.MessageEvent;
+import com.telemetry.engine.common.redis.writer.RedisAssetStateWriter;
 import com.telemetry.engine.consumer.entity.AssetCurrentLocation;
 import com.telemetry.engine.consumer.entity.AssetLocationHistory;
 import com.telemetry.engine.consumer.metrics.DailyCounter;
@@ -32,7 +31,7 @@ public class ProcessorImpl implements Processor {
   private final AssetCurrentLocationPersistence currentPersistence;
   private final DailyCounter dailyCounter;
   private final H3Service h3Service;
-  private final RedisService redisService;
+  private final RedisAssetStateWriter redisAssetStateWriter;
 
 
   @Override
@@ -84,55 +83,10 @@ public class ProcessorImpl implements Processor {
    * cleans up the old cell.
    */
   private Mono<Void> upsertRedisState(MessageEvent event) {
-    String assetKey = H3Constants.KEY_ASSET + event.getAssetId();
 
-    // Convert lat/lon to H3 index
-    Long h3IndexLong = h3Service.toH3CellAddress(
-            event.getLatitude(), event.getLongitude(), H3Constants.H3_RESOLUTION_8);
-    String newH3 = h3IndexLong.toString();
+    return redisAssetStateWriter.upsert(event);
+  }
 
-    return redisService.getHash(assetKey, Object.class)
-            .defaultIfEmpty(Map.of())
-            .flatMap(oldState -> {
-
-                // Previous H3 index
-                String oldH3 = (String) oldState.get("h3Index");
-
-                // Prepare asset hash with updated fields
-                Map<String, Object> fields = JsonMapperUtil.toMap(event);
-                fields.put("h3Index", newH3);
-                fields.put("assetTypeId", event.getAssetTypeId()); // store type for later filtering
-
-                // Update asset hash
-                Mono<Void> updateHash = redisService.putHash(assetKey, fields).then();
-
-                // Update H3 sets partitioned by asset type
-                String newH3SetKey = "h3:type:" + event.getAssetTypeId() + ":" + newH3;
-                Mono<Void> cellMovement;
-                if (oldH3 != null && !oldH3.equals(newH3)) {
-                    // Remove from old H3 set(s) by type if it exists
-                    Long oldTypeId = oldState.containsKey("assetTypeId")
-                            ? Long.parseLong(oldState.get("assetTypeId").toString())
-                            : event.getAssetTypeId();
-                    String oldH3SetKey = "h3:type:" + oldTypeId + ":" + oldH3;
-
-                    cellMovement = Mono.when(
-                            redisService.removeFromSet(oldH3SetKey, event.getAssetId().toString()),
-                            redisService.addToSet(newH3SetKey, event.getAssetId().toString())
-                    );
-                } else {
-                    // Add to current H3+type set
-                    cellMovement = redisService.addToSet(newH3SetKey, event.getAssetId().toString()).then();
-                }
-
-                // Publish update to H3+type channel
-                String channel = "stream:type:" + event.getAssetTypeId() + ":" + newH3;
-                Mono<Void> notify = redisService.publish(channel, fields).then();
-
-                // Execute all operations in parallel
-                return Mono.when(updateHash, cellMovement, notify);
-            });
-}
 
 
   private AssetLocationHistory toHistoryEntity(MessageEvent event) {

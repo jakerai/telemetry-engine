@@ -7,8 +7,8 @@ public interface AssetCategoryPersistence {
 
   Mono<AssetCategory> save(AssetCategory assetCategory);
   
-  Mono<Boolean> existsByCode(String code);
+  Mono<Boolean> existsByName(String name);
 
-  Mono<AssetCategory> findByCode(String code);
+  Mono<AssetCategory> findByName(String name);
 
 }

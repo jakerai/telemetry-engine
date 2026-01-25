@@ -14,24 +14,24 @@ public class AssetTypePersistenceImpl implements AssetTypePersistence {
   private final AssetTypeRepository assetTypeRepository;
 
   @Override
-  public Mono<AssetType> save(AssetType type) {
-    return assetTypeRepository.save(type);
+  public Mono<AssetType> save(AssetType assetType) {
+    return assetTypeRepository.save(assetType);
   }
 
   @Override
-  public Mono<Boolean> existsByCode(String code) {
-    return assetTypeRepository.existsByCode(code);
+  public Mono<Boolean> existsByName(String name) {
+    return assetTypeRepository.existsByName(name);
   }
 
   @Override
-  public Mono<AssetType> findByCode(String code) {
-    return assetTypeRepository.findByCode(code);
+  public Mono<AssetType> findByName(String name) {
+    return assetTypeRepository.findByName(name);
   }
 
   @Override
-  public Mono<Long> findCategoryIdByCode(String code) {
+  public Mono<Long> findCategoryIdByName(String name) {
    
-    return  assetTypeRepository.findCategoryIdByCode(code);
+    return  assetTypeRepository.findCategoryIdByName(name);
   }
 
 }

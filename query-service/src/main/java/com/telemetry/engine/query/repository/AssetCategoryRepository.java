@@ -6,11 +6,10 @@ import com.telemetry.engine.query.entity.AssetCategory;
 import reactor.core.publisher.Mono;
 
 @Repository
-public interface AssetCategoryRepository
-    extends ReactiveCrudRepository<AssetCategory, Long> {
+public interface AssetCategoryRepository extends ReactiveCrudRepository<AssetCategory, Long> {
 
-  Mono<Boolean> existsByCode(String code);
+  Mono<Boolean> existsByName(String name);
 
-  Mono<AssetCategory> findByCode(String code);
-  
+  Mono<AssetCategory> findByName(String name);
+
 }

@@ -19,7 +19,7 @@ public class AssetMetadataConfig {
   @Setter
   public static class Category {
 
-    private String code;
+    private String name;
     private String description;
 
   }
@@ -29,7 +29,7 @@ public class AssetMetadataConfig {
   @Setter
   public static class Type {
 
-    private String code;
+    private String name;
     private String category; // references Category.code
     private String description;
 

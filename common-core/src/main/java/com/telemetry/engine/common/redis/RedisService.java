@@ -64,9 +64,8 @@ public class RedisService {
    */
   public <T> Mono<Map<String, T>> getHash(String key, Class<T> clazz) {
     return commands.hgetall(key)
-        .flatMap(kv -> Mono
-            .fromCallable(
-                () -> Map.entry(kv.getKey(), JsonMapperUtil.deserializeFromJson(kv.getValue(), clazz)))
+        .flatMap(kv -> Mono.fromCallable(
+            () -> Map.entry(kv.getKey(), JsonMapperUtil.deserializeFromJson(kv.getValue(), clazz)))
             .subscribeOn(Schedulers.boundedElastic()))
         .collectMap(Map.Entry::getKey, Map.Entry::getValue);
   }
@@ -105,40 +104,42 @@ public class RedisService {
   // ---------------------- Pub/Sub Operations ----------------------
 
   /**
-   * Returns a Flux that emits messages from a Redis channel.
-   * Each subscriber gets its own dedicated Pub/Sub connection.
+   * Returns a Flux that emits messages from a Redis channel. Each subscriber gets its own dedicated
+   * Pub/Sub connection.
    */
   public Flux<String> subscribe(String channel) {
-      return Flux.usingWhen(
-              Mono.fromCallable(redisClient::connectPubSub), // acquire a new Pub/Sub connection
-              connection -> Flux.create(sink -> {
-                  RedisPubSubAdapter<String, String> listener = new RedisPubSubAdapter<>() {
-                      @Override
-                      public void message(String ch, String message) {
-                          if (channel.equals(ch)) {
-                              sink.next(message);
-                          }
-                      }
-                  };
+    return Flux.usingWhen(Mono.fromCallable(redisClient::connectPubSub), // acquire a new Pub/Sub
+                                                                         // connection
+        connection -> Flux.create(sink -> {
+          RedisPubSubAdapter<String, String> listener = new RedisPubSubAdapter<>() {
+            @Override
+            public void message(String ch, String message) {
+              if (channel.equals(ch)) {
+                sink.next(message);
+              }
+            }
+          };
 
-                  connection.addListener(listener);
-                  connection.async().subscribe(channel);
+          connection.addListener(listener);
+          connection.async().subscribe(channel);
 
-                  // Cleanup when subscriber cancels
-                  sink.onDispose(() -> {
-                      connection.async().unsubscribe(channel);
-                      connection.removeListener(listener);
-                  });
-              }, FluxSink.OverflowStrategy.BUFFER),
-              connection -> Mono.fromCompletionStage(connection.closeAsync()) // release connection
-      );
+          // Cleanup when subscriber cancels
+          sink.onDispose(() -> {
+            connection.async().unsubscribe(channel);
+            connection.removeListener(listener);
+          });
+        }, FluxSink.OverflowStrategy.BUFFER),
+        connection -> Mono.fromCompletionStage(connection.closeAsync()) // release connection
+    );
   }
-  
+
   public Mono<Long> publish(String channel, Object message) {
     return Mono.fromCallable(() -> JsonMapperUtil.serializeToJson(message))
         .subscribeOn(Schedulers.boundedElastic()).flatMap(json -> commands.publish(channel, json))
         .onErrorMap(e -> new IllegalStateException(
             "Failed to publish Redis message to channel: " + channel, e));
   }
+
+  
 
 }

@@ -8,10 +8,10 @@ import reactor.core.publisher.Mono;
 @Repository
 public interface AssetTypeRepository extends ReactiveCrudRepository<AssetType, Long> {
 
-  Mono<Boolean> existsByCode(String code);
+  Mono<Boolean> existsByName(String name);
 
-  Mono<AssetType> findByCode(String code);
+  Mono<AssetType> findByName(String name);
 
-  Mono<Long> findCategoryIdByCode(String code);
+  Mono<Long> findCategoryIdByName(String name);
 
 }

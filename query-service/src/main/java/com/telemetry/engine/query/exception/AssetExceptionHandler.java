@@ -1,4 +1,4 @@
-package com.telemetry.engine.ingestion.exception;
+package com.telemetry.engine.query.exception;
 
 import java.time.Instant;
 import java.util.HashMap;
@@ -14,14 +14,8 @@ import com.telemetry.engine.common.context.RequestContext;
 import com.telemetry.engine.common.dto.response.ServiceResponse;
 import reactor.core.publisher.Mono;
 
-
-/**
- * @author Vishal Rai
- */
-
 @RestControllerAdvice
-public class ProducerExceptionHandler {
-
+public class AssetExceptionHandler {
 
   @ExceptionHandler(WebExchangeBindException.class)
   public Mono<ResponseEntity<ServiceResponse<Map<String, String>>>> handleValidationErrors(
@@ -70,5 +64,5 @@ public class ProducerExceptionHandler {
     return Mono.just(ResponseEntity.status(ex.getStatusCode()).body(response));
   }
 
-
+  
 }

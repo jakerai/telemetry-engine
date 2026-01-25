@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Optional;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.reactive.TransactionalOperator;
 import com.telemetry.engine.query.entity.AssetCategory;
 import com.telemetry.engine.query.entity.AssetType;
 import com.telemetry.engine.query.persistence.AssetCategoryPersistence;
@@ -23,6 +24,7 @@ public class AssetMetadataInitializer implements CommandLineRunner {
   private final AssetMetadataConfig assetMetadataConfig;
   private final AssetCategoryPersistence assetCategoryPersistence;
   private final AssetTypePersistence assetTypePersistence;
+  private final TransactionalOperator operator;
 
   private static final int DB_CONCURRENCY_LIMIT = 5;
 
@@ -42,7 +44,9 @@ public class AssetMetadataInitializer implements CommandLineRunner {
 
   public Mono<Void> initializeMetadata() {
     return loadCategories().then(loadAssetTypes())
-        .doOnSuccess(v -> log.info("Asset metadata initialization completed successfully.")).then();
+        .doOnSuccess(v -> log.info("Asset metadata initialization completed successfully."))
+        .as(operator::transactional)
+        .then();
   }
 
   /** Load categories into DB if not already present */
@@ -52,11 +56,11 @@ public class AssetMetadataInitializer implements CommandLineRunner {
 
     return Flux.fromIterable(categories)
         .filterWhen(
-            cfg -> assetCategoryPersistence.existsByCode(cfg.getCode()).map(exists -> !exists))
+            cfg -> assetCategoryPersistence.existsByName(cfg.getName()).map(exists -> !exists))
         .flatMap(cfg -> {
-          log.info("Inserting category: {}", cfg.getCode());
+          log.info("Inserting category: {}", cfg.getName());
           AssetCategory entity =
-              AssetCategory.builder().code(cfg.getCode()).description(cfg.getDescription()).build();
+              AssetCategory.builder().name(cfg.getName()).description(cfg.getDescription()).build();
           return assetCategoryPersistence.save(entity);
         }, DB_CONCURRENCY_LIMIT).then();
   }
@@ -67,20 +71,20 @@ public class AssetMetadataInitializer implements CommandLineRunner {
         Optional.ofNullable(assetMetadataConfig.getTypes()).orElse(Collections.emptyList());
     log.info("Number of asset types found in yaml file={}", types.size());
     return Flux.fromIterable(types)
-        .flatMap(cfg -> assetTypePersistence.existsByCode(cfg.getCode()).flatMap(exists -> {
+        .flatMap(cfg -> assetTypePersistence.existsByName(cfg.getName()).flatMap(exists -> {
           if (exists) {
-            log.debug("Asset type {} already exists, skipping.", cfg.getCode());
+            log.debug("Asset type {} already exists, skipping.", cfg.getName());
             return Mono.empty();
           }
 
           /* Only search for Category if we actually need to insert the Type */
-          return assetCategoryPersistence.findByCode(cfg.getCategory())
+          return assetCategoryPersistence.findByName(cfg.getCategory())
               .switchIfEmpty(Mono
                   .error(new IllegalStateException("Category missing in DB: " + cfg.getCategory())))
               .flatMap(category -> {
-                log.info("Inserting asset type: {} (category_id={})", cfg.getCode(),
+                log.info("Inserting asset type: {} (category_id={})", cfg.getName(),
                     category.getId());
-                AssetType entity = AssetType.builder().code(cfg.getCode())
+                AssetType entity = AssetType.builder().name(cfg.getName())
                     .categoryId(category.getId()).description(cfg.getDescription()).build();
                 return assetTypePersistence.save(entity);
               });

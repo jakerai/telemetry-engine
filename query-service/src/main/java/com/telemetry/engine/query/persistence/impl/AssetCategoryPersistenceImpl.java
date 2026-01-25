@@ -19,13 +19,13 @@ public class AssetCategoryPersistenceImpl implements AssetCategoryPersistence {
   }
 
   @Override
-  public Mono<Boolean> existsByCode(String code) {
-    return assetCategoryRepository.existsByCode(code);
+  public Mono<Boolean> existsByName(String name) {
+    return assetCategoryRepository.existsByName(name);
   }
 
   @Override
-  public Mono<AssetCategory> findByCode(String code) {
-    return assetCategoryRepository.findByCode(code);
+  public Mono<AssetCategory> findByName(String name) {
+    return assetCategoryRepository.findByName(name);
   }
 
 

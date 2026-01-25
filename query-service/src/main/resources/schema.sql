@@ -36,7 +36,7 @@ CREATE EXTENSION IF NOT EXISTS postgis CASCADE;
 -- =======================================================
 CREATE TABLE IF NOT EXISTS telemetry.asset_category (
     id BIGSERIAL PRIMARY KEY,
-    code VARCHAR(50) NOT NULL UNIQUE,
+    name VARCHAR(50) NOT NULL UNIQUE,
     description TEXT,
     created_by BIGINT,
     modified_by BIGINT,
@@ -44,12 +44,14 @@ CREATE TABLE IF NOT EXISTS telemetry.asset_category (
     modified_at TIMESTAMPTZ
 );
 
+CREATE INDEX IF NOT EXISTS idx_asset_category_name
+    ON telemetry.asset_category(name);
 -- =======================================================
 -- 3. Asset Type
 -- =======================================================
 CREATE TABLE IF NOT EXISTS telemetry.asset_type (
     id BIGSERIAL PRIMARY KEY,
-    code VARCHAR(50) NOT NULL UNIQUE,
+    name VARCHAR(50) NOT NULL UNIQUE,
     category_id BIGINT NOT NULL REFERENCES telemetry.asset_category(id),
     description TEXT,
     created_by BIGINT,
@@ -60,7 +62,8 @@ CREATE TABLE IF NOT EXISTS telemetry.asset_type (
 
 CREATE INDEX IF NOT EXISTS idx_asset_type_category_id
     ON telemetry.asset_type(category_id);
-
+CREATE INDEX IF NOT EXISTS idx_asset_type_name
+    ON telemetry.asset_type(name);
 -- =======================================================
 -- 4. Asset
 -- =======================================================
@@ -69,7 +72,6 @@ CREATE TABLE IF NOT EXISTS telemetry.asset (
     name VARCHAR(100) NOT NULL,
     model VARCHAR(100),
     type_id BIGINT NOT NULL REFERENCES telemetry.asset_type(id),
-    asset_code VARCHAR(100),
     serial_number VARCHAR(100),
     status VARCHAR(50),
     owner_id BIGINT,
@@ -82,7 +84,6 @@ CREATE TABLE IF NOT EXISTS telemetry.asset (
 CREATE INDEX IF NOT EXISTS idx_asset_name ON telemetry.asset(name);
 CREATE INDEX IF NOT EXISTS idx_asset_model ON telemetry.asset(model);
 CREATE INDEX IF NOT EXISTS idx_asset_type_id ON telemetry.asset(type_id);
-CREATE INDEX IF NOT EXISTS idx_asset_asset_code ON telemetry.asset(asset_code);
 CREATE INDEX IF NOT EXISTS idx_asset_serial_number ON telemetry.asset(serial_number);
 CREATE INDEX IF NOT EXISTS idx_asset_owner_id_created_at_desc ON telemetry.asset (owner_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_asset_created_by_created_at_desc ON telemetry.asset (created_by, created_at DESC);

@@ -1,24 +1,22 @@
 package com.telemetry.engine.query.service.impl;
 
 import java.time.Duration;
-import java.time.Instant;
+import java.util.Collections;
 import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
-import com.telemetry.engine.common.constansts.H3Constants;
+import org.springframework.transaction.reactive.TransactionalOperator;
 import com.telemetry.engine.common.dto.request.ServiceRequest;
 import com.telemetry.engine.common.dto.response.ServiceResponse;
-import com.telemetry.engine.common.geo.H3Service;
-import com.telemetry.engine.common.mapper.JsonMapperUtil;
-import com.telemetry.engine.common.redis.RedisService;
-import com.telemetry.engine.query.dto.AssetLocationView;
+import com.telemetry.engine.common.redis.model.AssetRedisState;
+import com.telemetry.engine.common.redis.reader.RedisAssetStateReader;
+import com.telemetry.engine.query.dto.AssetDto;
 import com.telemetry.engine.query.dto.response.AssetLocationStreamEvent;
 import com.telemetry.engine.query.dto.response.AssetUpdateResponse;
 import com.telemetry.engine.query.dto.response.NearbyAsset;
 import com.telemetry.engine.query.dto.response.NearbyAssetStreamEvent;
 import com.telemetry.engine.query.dto.response.PagedResponse;
 import com.telemetry.engine.query.dto.resquest.AssetCreateRequest;
+import com.telemetry.engine.query.dto.resquest.AssetFilter;
 import com.telemetry.engine.query.dto.resquest.AssetUpdateRequest;
 import com.telemetry.engine.query.dto.resquest.NearbyAssetsRequest;
 import com.telemetry.engine.query.entity.Asset;
@@ -31,7 +29,6 @@ import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
-import tools.jackson.core.type.TypeReference;
 
 @Slf4j
 @Service
@@ -40,8 +37,8 @@ public class AssetServiceImpl implements AssetService {
 
   private final AssetCurrentLocationPersistence assetCurrentLocationPersistence;
   private final AssetPersistence assetPersistence;
-  private final RedisService redisService;
-  private final H3Service h3Service;
+  private final RedisAssetStateReader redisAssetStateReader;
+  private final TransactionalOperator operator;
 
   @Override
   public Mono<ServiceResponse<Void>> createAsset(
@@ -53,7 +50,7 @@ public class AssetServiceImpl implements AssetService {
 
     Asset asset = AssetCreateRequest.from(createAsset);
 
-    return assetPersistence.save(asset)
+    return assetPersistence.save(asset).as(operator::transactional)
         .map(savedAsset -> ServiceResponse.<Void>success("Asset created successfully"))
         .onErrorResume(e -> Mono
             .just(ServiceResponse.<Void>error("Failed to create asset: " + e.getMessage())));
@@ -62,35 +59,77 @@ public class AssetServiceImpl implements AssetService {
 
 
   @Override
-  public Mono<ServiceResponse<AssetLocationView>> getAsset(Long assetId) {
-    // TODO Auto-generated method stub
-    return null;
+  public Mono<ServiceResponse<AssetDto>> getAsset(Long assetId) {
+    return assetPersistence.findById(assetId).map(asset -> AssetDto.from(asset))
+        .map(assetDto -> ServiceResponse.success(assetDto, "Asset fetched successfully"))
+        .switchIfEmpty(Mono.just(ServiceResponse.error("Asset not found"))).onErrorResume(
+            e -> Mono.just(ServiceResponse.error("Failed to fetch asset: " + e.getMessage())));
   }
+
 
   @Override
   public Mono<ServiceResponse<AssetUpdateResponse>> updateAsset(Long assetId,
       AssetUpdateRequest request) {
-    // TODO Auto-generated method stub
-    return null;
+
+    return assetPersistence.findById(assetId).flatMap(existing -> {
+
+      boolean changed = AssetUpdateRequest.applyIfChanged(existing, request);
+
+      if (!changed) {
+        return Mono.just(
+            ServiceResponse.success(AssetUpdateResponse.from(existing), "No changes to update"));
+      }
+
+      return assetPersistence.save(existing).map(saved -> ServiceResponse
+          .success(AssetUpdateResponse.from(saved), "Asset updated successfully"));
+    });
+
   }
+
+
 
   @Override
-  public Mono<ServiceResponse<PagedResponse<AssetLocationView>>> getAssets(int page, int size) {
-    // TODO Auto-generated method stub
-    return null;
+  public Mono<ServiceResponse<PagedResponse<AssetDto>>> getAssets(int page, int size,
+      String createdBy, String modifiedBy, Long typeId, Long ownerId, String category,
+      String sortDirection, String sortBy) {
+
+    int finalPage = Math.max(page, 0);
+    int finalSize = Math.max(size, 1);
+
+    page = Math.max(page, 0);
+    size = Math.max(size, 1);
+
+    sortBy = (sortBy == null || sortBy.isBlank()) ? "createdAt" : sortBy;
+    sortDirection =
+        (sortDirection == null || sortDirection.isBlank()) ? "DESC" : sortDirection.toUpperCase();
+
+    AssetFilter filter =
+        AssetFilter.builder().createdBy(createdBy).modifiedBy(modifiedBy).typeId(typeId)
+            .ownerId(ownerId).category(category).sortBy(sortBy).sortDir(sortDirection).build();
+
+    return Mono
+        .zip(assetPersistence.count(filter).defaultIfEmpty(0L),
+            assetPersistence.findAll(filter, finalPage, finalSize).collectList()
+                .defaultIfEmpty(Collections.emptyList()))
+        .<ServiceResponse<PagedResponse<AssetDto>>>map(tuple -> {
+          long total = tuple.getT1();
+          List<AssetDto> data = tuple.getT2();
+
+          int totalPages = (int) Math.ceil((double) total / finalSize);
+          boolean hasNext = (finalPage + 1) < totalPages;
+
+          return ServiceResponse.success(
+              new PagedResponse<AssetDto>(data, finalPage, finalSize, total, totalPages, hasNext),
+              "Fetched successfully");
+        }).onErrorResume(e -> {
+          log.error("Failed to fetch filtered assets", e);
+          return Mono
+              .just(ServiceResponse.<PagedResponse<AssetDto>>error("Failed to fetch assets"));
+        });
   }
-
-  @Override
-  public Mono<ServiceResponse<PagedResponse<AssetLocationView>>> getAssetsByOwnerId(Long ownerId,
-      int page, int size) {
-    // TODO Auto-generated method stub
-    return null;
-  }
-
-
 
   /**
-   * Transport-agnostic: returns a Flux of asset maps (snapshot + deltas + heartbeat)
+   * Fetches nearby assets (SNAPSHOT: all assets at that moment + DELTAS: new updates + HEARTBEAT)
    */
   public Flux<NearbyAssetStreamEvent> getNearbyAssets(double lat, double lon, Long assetTypeId,
       int radiusMeters) {
@@ -100,11 +139,11 @@ public class AssetServiceImpl implements AssetService {
 
     /* SNAPSHOT (finite) */
     Flux<NearbyAssetStreamEvent> snapshot = getSnapshot(req).flatMapMany(Flux::fromIterable)
-        .map(this::toNearbyResponse).map(resp -> NearbyAssetStreamEvent.builder()
+        .map(NearbyAsset::from).map(resp -> NearbyAssetStreamEvent.builder()
             .streamType(StreamType.SNAPSHOT).data(resp).build());
 
     /* DELTAS (infinite) */
-    Flux<NearbyAssetStreamEvent> deltas = subscribeToDeltas(req).map(this::toNearbyResponse).map(
+    Flux<NearbyAssetStreamEvent> deltas = subscribeToDeltas(req).map(NearbyAsset::from).map(
         resp -> NearbyAssetStreamEvent.builder().streamType(StreamType.DELTA).data(resp).build());
 
     /* HEARTBEAT (infinite) */
@@ -115,95 +154,82 @@ public class AssetServiceImpl implements AssetService {
     return Flux.concat(snapshot, Flux.merge(deltas, heartbeat));
   }
 
-  /**
-   * Fetch snapshot from Redis first; fallback to DB
-   */
-  private Mono<List<Map<String, Object>>> getSnapshot(NearbyAssetsRequest req) {
 
-    long centerH3 =
-        h3Service.toH3CellAddress(req.getLat(), req.getLon(), H3Constants.H3_RESOLUTION_8);
-
-    // Generate keys for H3 k-ring + type filter
-    List<String> h3Keys = h3Service.kRing(centerH3, req.getRadiusMeters()).stream()
-        .map(h -> "h3:type:" + req.getAssetTypeId() + ":" + h).collect(Collectors.toList());
-
-    return redisService.unionSets(h3Keys).collectList().flatMap(assetIds -> {
-      if (assetIds.isEmpty()) {
-        // fallback to DB
-        return assetCurrentLocationPersistence
-            .findNearby(req.getAssetTypeId(), req.getLat(), req.getLon(), req.getRadiusMeters())
-            .map(dto -> JsonMapperUtil.toMap(dto)).collectList();
-      }
-      // Fetch asset hashes from Redis
-      return Flux.fromIterable(assetIds)
-          .flatMap(id -> redisService.getHash("asset:" + id, Object.class).defaultIfEmpty(Map.of()))
-          .filter(map -> !map.isEmpty()).collectList();
-    });
-  }
 
   /**
-   * Subscribe to real-time deltas from Redis
+   * Fetches snapshot from Redis first else fallback to DB
+   * 
+   * @param req
+   * @return List of nearby assets
    */
-  private Flux<Map<String, Object>> subscribeToDeltas(NearbyAssetsRequest req) {
+  private Mono<List<AssetRedisState>> getSnapshot(NearbyAssetsRequest req) {
+    int ring = (int) Math.ceil(req.getRadiusMeters() / 1000.0);
 
-    long centerH3 =
-        h3Service.toH3CellAddress(req.getLat(), req.getLon(), H3Constants.H3_RESOLUTION_8);
+    log.debug("Fetching snapshot for assetTypeId={} at lat={}, lon={}, radius={}",
+        req.getAssetTypeId(), req.getLat(), req.getLon(), req.getRadiusMeters());
 
-    int ringSize = (int) Math.ceil(req.getRadiusMeters() / 1000.0);
+    /* Fetch from Redis */
+    return redisAssetStateReader
+        .findNearbyByType(req.getLat(), req.getLon(), req.getAssetTypeId(), ring).collectList()
+        .flatMap(list -> {
+          if (list.isEmpty()) {
+            log.debug("No assets found in Redis, falling back to DB for assetTypeId={}",
+                req.getAssetTypeId());
 
-    List<String> topics = h3Service.kRing(centerH3, ringSize).stream()
-        .map(h -> "stream:type:" + req.getAssetTypeId() + ":" + h).collect(Collectors.toList());
+            /* Fetch from DB */
+            return assetCurrentLocationPersistence
+                .findNearby(req.getAssetTypeId(), req.getLat(), req.getLon(), req.getRadiusMeters())
+                .map(dto -> {
+                  log.debug("Adding asset {} from DB snapshot", dto.assetId());
+                  return AssetRedisState.builder().assetId(dto.assetId())
+                      .assetTypeId(dto.assetTypeId()).latitude(dto.latitude())
+                      .longitude(dto.longitude()).heading(dto.heading()).speed(dto.speed())
+                      .deviceTs(dto.deviceTs()).build();
+                }).collectList();
+          }
 
-    return Flux.fromIterable(topics).flatMap(redisService::subscribe) // Redis pub/sub
-        .publishOn(Schedulers.boundedElastic()).map(json -> {
-          Map<String, Object> map =
-              JsonMapperUtil.deserializeFromJson(json, new TypeReference<Map<String, Object>>() {});
-          return map != null ? map : Map.of();
+          log.debug("Found {} assets in Redis for snapshot", list.size());
+          return Mono.just(list);
         });
   }
 
-  private NearbyAsset toNearbyResponse(Map<String, Object> map) {
-    double speed = getDouble(map, "speed");
-    return new NearbyAsset(getLong(map, "assetId"), (String) map.get("assetType"),
-        getLong(map, "operatorId"), getDouble(map, "lat"), getDouble(map, "lon"),
-        getDouble(map, "distanceMeters"), speed > 0, speed, getDouble(map, "heading"),
-        map.containsKey("deviceTs") ? Instant.ofEpochMilli(getLong(map, "deviceTs"))
-            : Instant.now());
-  }
 
-  private Long getLong(Map<String, Object> map, String key) {
-    return map.containsKey(key) ? Long.parseLong(map.get(key).toString()) : null;
-  }
+  /**
+   * Subscribes to real-time deltas from Redis
+   * 
+   * @param req
+   * @return
+   */
+  private Flux<AssetRedisState> subscribeToDeltas(NearbyAssetsRequest req) {
 
-  private double getDouble(Map<String, Object> map, String key) {
-    return map.containsKey(key) ? Double.parseDouble(map.get(key).toString()) : 0.0;
+    int ring = (int) Math.ceil(req.getRadiusMeters() / 1000.0);
+    return redisAssetStateReader.subscribeToNearbyTypeDeltas(req.getLat(), req.getLon(),
+        req.getAssetTypeId(), ring);
   }
 
 
 
   @Override
   public Flux<AssetLocationStreamEvent> trackAsset(Long assetId) {
+    /* subscribe to a single asset */
+    Flux<AssetRedisState> stateFlux = redisAssetStateReader.streamAsset(assetId).publish()
+        .refCount(1); /* Automatically unsubscribe when client disconnects */
 
-    String channel = "stream:asset:" + assetId;
+    Flux<AssetLocationStreamEvent> updates =
+        stateFlux.map(state -> AssetLocationStreamEvent.builder().streamType(StreamType.UPDATE)
+            .data(NearbyAsset.from(state)).build()).publishOn(Schedulers.boundedElastic());
 
-    // Asset updates from Redis pub/sub
-    Flux<AssetLocationStreamEvent> updates = redisService.subscribe(channel)
-        .map(json -> AssetLocationStreamEvent.builder().streamType(StreamType.UPDATE)
-            .data(JsonMapperUtil.deserializeFromJson(json, NearbyAsset.class)).build());
-
-    // Heartbeat every 10 seconds
+    /* Heartbeat every 10 seconds */
     Flux<AssetLocationStreamEvent> heartbeat =
-        Flux.interval(Duration.ofSeconds(10)).map(t -> AssetLocationStreamEvent.builder()
+        Flux.interval(Duration.ofSeconds(10)).map(tick -> AssetLocationStreamEvent.builder()
             .streamType(StreamType.HEARTBEAT).data(null).build());
 
-    // Offline detection: if no update for 30s, emit OFFLINE event
-    Flux<AssetLocationStreamEvent> offline = updates.timeout(Duration.ofSeconds(30)).onErrorReturn(
-        AssetLocationStreamEvent.builder().streamType(StreamType.OFFLINE).data(null).build());
+    /* Emit OFFLINE if no updates in 60 seconds */
+    Flux<AssetLocationStreamEvent> offline = updates.timeout(Duration.ofSeconds(60), Flux.just(
+        AssetLocationStreamEvent.builder().streamType(StreamType.OFFLINE).data(null).build()));
 
-    // Merge updates, heartbeat, and offline detection into a single Flux
-    return Flux.merge(updates, heartbeat, offline).publishOn(Schedulers.boundedElastic());
+    return Flux.merge(updates, heartbeat, offline);
   }
-
 
 
 }

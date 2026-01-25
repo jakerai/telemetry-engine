@@ -2,7 +2,7 @@ package com.telemetry.engine.query.service;
 
 import com.telemetry.engine.common.dto.request.ServiceRequest;
 import com.telemetry.engine.common.dto.response.ServiceResponse;
-import com.telemetry.engine.query.dto.AssetLocationView;
+import com.telemetry.engine.query.dto.AssetDto;
 import com.telemetry.engine.query.dto.response.AssetLocationStreamEvent;
 import com.telemetry.engine.query.dto.response.AssetUpdateResponse;
 import com.telemetry.engine.query.dto.response.NearbyAssetStreamEvent;
@@ -16,15 +16,13 @@ public interface AssetService {
 
   Mono<ServiceResponse<Void>> createAsset(ServiceRequest<AssetCreateRequest> serviceRequest);
 
-  Mono<ServiceResponse<AssetLocationView>> getAsset(Long assetId);
+  Mono<ServiceResponse<AssetDto>> getAsset(Long assetId);
 
   Mono<ServiceResponse<AssetUpdateResponse>> updateAsset(Long assetId, AssetUpdateRequest request);
 
-  Mono<ServiceResponse<PagedResponse<AssetLocationView>>> getAssets(int page, int size);
-
-  Mono<ServiceResponse<PagedResponse<AssetLocationView>>> getAssetsByOwnerId(Long ownerId, int page,
-      int size);
-
+  Mono<ServiceResponse<PagedResponse<AssetDto>>> getAssets(int page, int size, String createdBy,
+      String modifiedBy, Long typeId, Long ownerId, String category, String sortDirection,
+      String sortBy);
 
   Flux<NearbyAssetStreamEvent> getNearbyAssets(double lat, double lon, Long assetTypeId,
       int radius);
