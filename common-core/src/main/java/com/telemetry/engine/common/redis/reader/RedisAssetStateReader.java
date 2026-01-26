@@ -14,8 +14,9 @@ import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 
 /**
- * Redis reader for querying assets by H3 + assetType.
+ * @author Vishal Rai
  */
+
 @Slf4j
 public class RedisAssetStateReader {
 
@@ -28,17 +29,16 @@ public class RedisAssetStateReader {
   }
 
   /**
-   * Fetch a single asset state by asset ID.
+   * Fetches a single asset state by asset ID.
    */
   public Mono<AssetRedisState> getAssetState(long assetId) {
-    String key = AssetRedisKeys.assetState(assetId);
-    return redisService.getValue(key, AssetRedisState.class).timeout(Duration.ofSeconds(1)) // safety
-                                                                                            // timeout
+    String key = AssetRedisKeys.keyForAssetState(assetId);
+    return redisService.getValue(key, AssetRedisState.class).timeout(Duration.ofSeconds(1))
         .onErrorResume(e -> Mono.empty());
   }
 
   /**
-   * Find all assets nearby (H3 k-ring) for a given assetType.
+   * Finds all assets nearby (H3 k-ring) for a given assetType.
    *
    * @param lat center latitude
    * @param lon center longitude
@@ -49,23 +49,34 @@ public class RedisAssetStateReader {
   public Flux<AssetRedisState> findNearbyByType(double lat, double lon, long assetTypeId,
       int ring) {
 
-    String centerH3 = h3Service.toH3(lat, lon);
+    /* Converting the search center into an H3 cell so we can do spatial lookup */
+    String centerH3 = h3Service.getH3CellAddress(lat, lon);
 
-    log.debug("findNearbyByType called: assetTypeId={}, lat={}, lon={}, ring={}, centerH3={}",
+    log.debug("Fetching nearby assets: assetTypeId={}, lat={}, lon={}, ring={}, centerH3={}",
         assetTypeId, lat, lon, ring, centerH3);
 
-    // Generate H3 keys for this type
-    List<String> h3Keys = h3Service.kRing(centerH3, ring).stream()
-        .map(h3 -> AssetRedisKeys.h3TypeCell(assetTypeId, h3)).collect(Collectors.toList());
+    /*
+     * Generating Redis set keys for all H3 cells in the k-ring around the center. Each set
+     * represents assets of a given type inside one H3 cell.
+     */
+    List<String> h3Keys = h3Service.getKRingAddresses(centerH3, ring).stream()
+        .map(h3 -> AssetRedisKeys.keyForH3TypeCell(assetTypeId, h3)).collect(Collectors.toList());
 
     log.debug("Generated {} H3 Redis set keys for assetTypeId={}: {}", h3Keys.size(), assetTypeId,
         h3Keys);
 
-    // Get all asset IDs in those H3 sets (SUNION)
+    /*
+     * Performing a Redis SUNION across all H3 sets. This gives a de-duplicated list of assetIds
+     * that fall within the requested radius (center cell + surrounding rings).
+     */
     return redisService.unionSets(h3Keys)
         .doOnSubscribe(s -> log.debug("Executing Redis SUNION for assetTypeId={}", assetTypeId))
         .doOnNext(assetIdStr -> log.debug("SUNION returned assetId={}", assetIdStr))
         .flatMap(assetIdStr -> {
+          /*
+           * Asset IDs are stored as strings in Redis sets, so we need to convert them back to long
+           * before lookup.
+           */
           long assetId;
           try {
             assetId = Long.parseLong(assetIdStr);
@@ -74,6 +85,10 @@ public class RedisAssetStateReader {
             return Mono.empty();
           }
 
+          /*
+           * Fetch the latest known state for this asset. This ensures we return fresh,
+           * authoritative data instead of relying on index membership alone.
+           */
           log.debug("Fetching Redis state for assetId={}", assetId);
           return getAssetState(assetId);
         });
@@ -81,77 +96,110 @@ public class RedisAssetStateReader {
 
 
   /**
-   * Optional helper: fetch as CompletableFuture
+   * Optional helper to fetch as CompletableFuture
    */
   public List<AssetRedisState> findNearbyByTypeCF(double lat, double lon, long assetTypeId,
       int ring) {
-    return findNearbyByType(lat, lon, assetTypeId, ring).collectList().block(); // blocking for
-                                                                                // legacy sync usage
+    return findNearbyByType(lat, lon, assetTypeId, ring).collectList()
+        .block(); /* blocking for legacy sync usage */
   }
 
+
   /**
-   * New method: subscribe to delta updates for a given assetType + nearby H3 ring
+   * Subscribes to real-time updates (deltas) for all assets of a given type within a specified H3
+   * ring around a geographic point. This method is used for live tracking scenarios, where clients
+   * need instant updates for nearby assets instead of polling Redis repeatedly.
+   * <p>
+   * <b>Notes:</b>
+   * </p>
+   * <ul>
+   * <li>The returned Flux will continuously emit updates as new telemetry arrives.</li>
+   * <li>It only streams assets currently in the H3 cells included in the ring.</li>
+   * <li>Delta messages must be serialized to JSON when published by upstream code.</li>
+   * </ul>
+   *
+   * @param lat latitude of the center point
+   * @param lon longitude of the center point
+   * @param assetTypeId asset type to filter
+   * @param ring number of H3 rings around the center cell
+   * @return a {@link Flux} of {@link AssetRedisState} representing live updates
    */
   public Flux<AssetRedisState> subscribeToNearbyTypeDeltas(double lat, double lon, long assetTypeId,
       int ring) {
-    String centerH3 = h3Service.toH3(lat, lon);
-    List<String> h3Cells = h3Service.kRing(centerH3, ring);
 
-    List<String> channels = h3Cells.stream()
-        .map(h3 -> AssetRedisKeys.streamTypeCell(assetTypeId, h3)).collect(Collectors.toList());
+    /* Converting lat/lon to the center H3 cell for spatial indexing */
+    String centerH3 = h3Service.getH3CellAddress(lat, lon);
 
+    /* Computing all neighboring H3 cells within the requested k-ring */
+    List<String> h3Cells = h3Service.getKRingAddresses(centerH3, ring);
+
+    /*
+     * Generating the Redis Pub/Sub channels for this asset type + H3 cells Each H3 cell + asset
+     * type combination has its own stream channel
+     */
+    List<String> channels =
+        h3Cells.stream().map(h3 -> AssetRedisKeys.keyForStreamTypeCell(assetTypeId, h3))
+            .collect(Collectors.toList());
+
+    /*
+     * Subscribing to all channels concurrently. redisService.subscribe returns a Flux<String>
+     * containing JSON updates
+     */
     log.debug("Subscribing to Redis delta channels for assetTypeId={} channels={}", assetTypeId,
         channels);
-
-    return Flux.fromIterable(channels).flatMap(redisService::subscribe) // returns Flux<String> JSON
-                                                                        // updates
-        .map(json -> {
-          AssetRedisState state = JsonMapperUtil.deserializeFromJson(json, AssetRedisState.class);
-          log.debug("Delta received for assetId={}, h3Index={}", state.getAssetId(),
-              state.getH3Index());
-          return state;
-        }).publishOn(Schedulers.boundedElastic());
+    return Flux.fromIterable(channels).flatMap(redisService::subscribe).map(json -> {
+      AssetRedisState state = JsonMapperUtil.deserializeFromJson(json, AssetRedisState.class);
+      log.debug("Delta received for assetId={}, h3Index={}", state.getAssetId(),
+          state.getH3Index());
+      return state;
+    })/* Using boundedElastic scheduler for deserialization to avoid blocking reactive threads */
+        .publishOn(Schedulers.boundedElastic());
 
   }
 
 
   /**
-   * Reactive subscriber for a single asset. Automatically emits updates and unsubscribes on client
-   * disconnect.
+   * Fetch the last known state of an asset from Redis. Returns empty if no state exists.
    *
-   * @param assetId the asset ID to track
-   * @return Flux emitting updated AssetRedisState
+   * @param assetId the asset ID
    */
-  public Flux<AssetRedisState> streamAsset(long assetId) {
-    String channel = AssetRedisKeys.streamAsset(assetId);
-
-    log.debug("Tracking assetId={} on channel={}", assetId, channel);
-
-    // Get last known state from Redis to emit immediately on subscription
-    Mono<AssetRedisState> lastKnownState = getAssetState(assetId)
-        .doOnNext(state -> log.debug("Emitting last known state for assetId={}", assetId))
-        .defaultIfEmpty(null);
-
-    // Subscribe to live updates
-    Flux<AssetRedisState> liveUpdates = redisService.subscribe(channel).map(json -> {
-      try {
-        return JsonMapperUtil.deserializeFromJson(json, AssetRedisState.class);
-      } catch (Exception e) {
-        log.error("Failed to deserialize asset update for assetId={}", assetId, e);
-        return null;
-      }
-    }).filter(state -> state != null).publishOn(Schedulers.boundedElastic())
-        .doOnCancel(() -> log.debug("Client disconnected, unsubscribed from assetId={}", assetId));
-
-    // Emit last known state first, then live updates
-    return lastKnownState.flatMapMany(state -> {
-      if (state != null) {
-        return Flux.concat(Mono.just(state), liveUpdates);
-      } else {
-        return liveUpdates;
-      }
-    });
+  public Mono<AssetRedisState> getLastSnapshotForAsset(long assetId) {
+    return getAssetState(assetId) /* Fetch last known data */
+        .doOnNext(state -> log.debug("Fetched last known snapshot for assetId={}", assetId))
+        .switchIfEmpty(
+            Mono.fromRunnable(() -> log.debug("No last known snapshot for assetId={}", assetId)));
   }
+
+
+  /**
+   * Subscribe to live delta updates for a specific asset from Redis Pub/Sub. Each update is
+   * deserialized into AssetRedisState.
+   *
+   * @param assetId the asset ID
+   */
+  public Flux<AssetRedisState> subscribeToAssetDeltas(long assetId) {
+    String channel = AssetRedisKeys.keyForStreamAsset(assetId);
+
+    // This log will only print when someone subscribes
+    return Flux.defer(() -> {
+        log.info("Subscribing to asset delta channel={}", channel);
+
+        return redisService.subscribe(channel)
+            .publishOn(Schedulers.boundedElastic())
+            .mapNotNull(json -> {
+                try {
+                    return JsonMapperUtil.deserializeFromJson(json, AssetRedisState.class);
+                } catch (Exception e) {
+                    log.error("Failed to deserialize delta for assetId={}", assetId, e);
+                    return null; // skip invalid messages
+                }
+            })
+            .doOnCancel(() -> log.debug("Client unsubscribed from assetId={}", assetId))
+            /* Share subscription among multiple clients */
+            .share();
+    });
+}
+
 
 
 }

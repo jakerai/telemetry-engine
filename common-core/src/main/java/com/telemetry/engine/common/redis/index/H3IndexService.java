@@ -27,8 +27,8 @@ public class H3IndexService {
    * @return H3 address string
    */
   public String toH3(double lat, double lon) {
-    long h3Index = h3Service.toH3CellAddress(lat, lon, RESOLUTION); // fixed resolution 8
-    return h3Service.h3ToAddress(h3Index);
+    long h3Index = h3Service.getH3CellIndex(lat, lon, RESOLUTION); // fixed resolution 8
+    return h3Service.toH3Address(h3Index);
   }
 
   /**
@@ -39,30 +39,30 @@ public class H3IndexService {
    * @return List of H3 addresses as strings
    */
   public List<String> kRing(String h3Address, int ringSize) {
-    long center = h3Service.addressToH3(h3Address);
-    List<Long> neighbors = h3Service.kRing(center, ringSize);
-    return neighbors.stream().map(h3Service::h3ToAddress).collect(Collectors.toList());
+    long center = h3Service.toH3Index(h3Address);
+    List<Long> neighbors = h3Service.getKRingIndexes(center, ringSize);
+    return neighbors.stream().map(h3Service::toH3Address).collect(Collectors.toList());
   }
 
   /**
    * Optional helper: convert lat/lon to long H3 index. Useful for internal computations.
    */
   public long toH3Long(double lat, double lon) {
-    return h3Service.toH3CellAddress(lat, lon, RESOLUTION);
+    return h3Service.getH3CellIndex(lat, lon, RESOLUTION);
   }
 
   /**
    * Optional helper: convert H3 string to long.
    */
   public long stringToLong(String h3Address) {
-    return h3Service.addressToH3(h3Address);
+    return h3Service.toH3Index(h3Address);
   }
 
   /**
    * Optional helper: convert H3 long to string.
    */
   public String longToString(long h3Index) {
-    return h3Service.h3ToAddress(h3Index);
+    return h3Service.toH3Address(h3Index);
   }
 
 }

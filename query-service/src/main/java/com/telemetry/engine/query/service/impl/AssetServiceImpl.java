@@ -163,15 +163,14 @@ public class AssetServiceImpl implements AssetService {
    * @return List of nearby assets
    */
   private Mono<List<AssetRedisState>> getSnapshot(NearbyAssetsRequest req) {
-    int ring = (int) Math.ceil(req.getRadiusMeters() / 1000.0);
 
     log.debug("Fetching snapshot for assetTypeId={} at lat={}, lon={}, radius={}",
         req.getAssetTypeId(), req.getLat(), req.getLon(), req.getRadiusMeters());
 
     /* Fetch from Redis */
     return redisAssetStateReader
-        .findNearbyByType(req.getLat(), req.getLon(), req.getAssetTypeId(), ring).collectList()
-        .flatMap(list -> {
+        .findNearbyByType(req.getLat(), req.getLon(), req.getAssetTypeId(), req.getRadiusMeters())
+        .collectList().flatMap(list -> {
           if (list.isEmpty()) {
             log.debug("No assets found in Redis, falling back to DB for assetTypeId={}",
                 req.getAssetTypeId());
@@ -202,34 +201,54 @@ public class AssetServiceImpl implements AssetService {
    */
   private Flux<AssetRedisState> subscribeToDeltas(NearbyAssetsRequest req) {
 
-    int ring = (int) Math.ceil(req.getRadiusMeters() / 1000.0);
     return redisAssetStateReader.subscribeToNearbyTypeDeltas(req.getLat(), req.getLon(),
-        req.getAssetTypeId(), ring);
+        req.getAssetTypeId(), req.getRadiusMeters());
   }
 
 
 
   @Override
   public Flux<AssetLocationStreamEvent> trackAsset(Long assetId) {
-    /* subscribe to a single asset */
-    Flux<AssetRedisState> stateFlux = redisAssetStateReader.streamAsset(assetId).publish()
-        .refCount(1); /* Automatically unsubscribe when client disconnects */
 
-    Flux<AssetLocationStreamEvent> updates =
-        stateFlux.map(state -> AssetLocationStreamEvent.builder().streamType(StreamType.UPDATE)
-            .data(NearbyAsset.from(state)).build()).publishOn(Schedulers.boundedElastic());
+    /* SNAPSHOT finite */
+    Mono<AssetLocationStreamEvent> snapshotMono =
+        redisAssetStateReader.getLastSnapshotForAsset(assetId)
+            .switchIfEmpty(getSnapshotFromDb(assetId)).map(state -> AssetLocationStreamEvent
+                .builder().streamType(StreamType.SNAPSHOT).data(NearbyAsset.from(state)).build());
 
-    /* Heartbeat every 10 seconds */
+    /* DELTAS infinite */
+    Flux<AssetLocationStreamEvent> deltaFlux = redisAssetStateReader
+        .subscribeToAssetDeltas(assetId).map(state -> AssetLocationStreamEvent.builder()
+            .streamType(StreamType.UPDATE).data(NearbyAsset.from(state)).build())
+        .publishOn(Schedulers.boundedElastic());
+
+    /* HEARTBEAT infinite every 10 seconds */
     Flux<AssetLocationStreamEvent> heartbeat =
         Flux.interval(Duration.ofSeconds(10)).map(tick -> AssetLocationStreamEvent.builder()
             .streamType(StreamType.HEARTBEAT).data(null).build());
 
-    /* Emit OFFLINE if no updates in 60 seconds */
-    Flux<AssetLocationStreamEvent> offline = updates.timeout(Duration.ofSeconds(60), Flux.just(
-        AssetLocationStreamEvent.builder().streamType(StreamType.OFFLINE).data(null).build()));
+    return Flux.concat(snapshotMono, Flux.merge(deltaFlux, heartbeat))
+        .doOnSubscribe(sub -> log.debug("Client subscribed to assetId={}", assetId));
 
-    return Flux.merge(updates, heartbeat, offline);
   }
+
+  /**
+   * Fetch the last known state of an asset from the database.
+   *
+   * @param assetId the asset ID
+   * @return Mono emitting AssetRedisState if found, or empty if not found
+   */
+  public Mono<AssetRedisState> getSnapshotFromDb(long assetId) {
+    return assetCurrentLocationPersistence.findByAssetId(assetId)
+        .map(dto -> AssetRedisState.builder().assetId(dto.assetId()).assetTypeId(dto.assetTypeId())
+            .latitude(dto.latitude()).longitude(dto.longitude()).speed(dto.speed())
+            .heading(dto.heading()).deviceTs(dto.deviceTs()).build())
+        .doOnNext(state -> log.debug("Fetched snapshot from DB for assetId={}", assetId))
+        .switchIfEmpty(
+            Mono.fromRunnable(() -> log.debug("No snapshot found in DB for assetId={}", assetId))
+                .then(Mono.empty()));
+  }
+
 
 
 }

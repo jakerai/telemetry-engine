@@ -18,7 +18,7 @@ public class AssetSseController {
 
   private final AssetService assetService;
 
-  @GetMapping(value = "/sse/nearby", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+  @GetMapping(value = "/nearby", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
   public Flux<ServerSentEvent<?>> streamNearbyAssets(@RequestParam Long assetTypeId,
       @RequestParam double lat, @RequestParam double lon, @RequestParam int radiusMeters) {
 

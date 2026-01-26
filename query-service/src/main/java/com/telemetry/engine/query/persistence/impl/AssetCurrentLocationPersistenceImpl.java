@@ -24,7 +24,7 @@ public class AssetCurrentLocationPersistenceImpl implements AssetCurrentLocation
       double radiusMeters) {
     String sql = """
             SELECT acl.asset_id          AS asset_id,
-                   at.code               AS asset_type,
+                   at.id                 AS asset_type_id,
                    acl.operator_id       AS operator_id,
                    acl.lat               AS latitude,
                    acl.lon               AS longitude,
@@ -55,7 +55,7 @@ public class AssetCurrentLocationPersistenceImpl implements AssetCurrentLocation
   public Mono<NearbyAsset> findByAssetId(Long assetId) {
     String sql = """
             SELECT acl.asset_id          AS asset_id,
-                   at.code               AS asset_type,
+                   at.id                 AS asset_type_id,
                    acl.operator_id       AS operator_id,
                    acl.lat               AS latitude,
                    acl.lon               AS longitude,
@@ -75,7 +75,7 @@ public class AssetCurrentLocationPersistenceImpl implements AssetCurrentLocation
 
   private NearbyAsset mapRowToNearbyAsset(Row row) {
     Long assetId = row.get("asset_id", Long.class);
-    Long assetTypeId = row.get("asset_type", Long.class);
+    Long assetTypeId = row.get("asset_type_id", Long.class);
     Long operatorId = row.get("operator_id", Long.class);
     double latitude = row.get("latitude", Double.class);
     double longitude = row.get("longitude", Double.class);

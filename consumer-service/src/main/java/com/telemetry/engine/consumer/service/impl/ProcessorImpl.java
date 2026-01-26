@@ -55,25 +55,25 @@ public class ProcessorImpl implements Processor {
           MessageEvent latestEvent =
               events.stream().max(Comparator.comparing(MessageEvent::getDeviceTs)).orElseThrow();
 
-          Mono<Void> historyInsert = insertHistory(events);
-          Mono<Void> dbUpsert = upsertCurrentStateDB(latestEvent);
-          Mono<Void> redisUpsert = upsertRedisState(latestEvent);
+          Mono<Void> historyInsertDB = insertAssetHistoryEventsDB(events);
+          Mono<Void> currentUpsertDB = upsertAssertCurrentEventDB(latestEvent);
+          Mono<Void> currentUpsertRedis = upsertAssertCurrentEventRedisCache(latestEvent);
 
-          return Mono.when(historyInsert, dbUpsert, redisUpsert)
+          return Mono.when(historyInsertDB, currentUpsertDB, currentUpsertRedis)
               .doOnSuccess(v -> dailyCounter.increment(events.size()))
               .doOnError(e -> log.error("Telemetry batch failed", e));
         }).then();
   }
 
 
-  private Mono<Void> insertHistory(List<MessageEvent> events) {
+  private Mono<Void> insertAssetHistoryEventsDB(List<MessageEvent> events) {
     return Flux.fromIterable(events).map(this::toHistoryEntity).collectList()
         .flatMapMany(historyPersistence::insertAll).then();
   }
 
 
 
-  private Mono<Void> upsertCurrentStateDB(MessageEvent event) {
+  private Mono<Void> upsertAssertCurrentEventDB(MessageEvent event) {
     return Mono.just(event).map(this::toCurrentEntity).flatMap(currentPersistence::upsert).then();
   }
 
@@ -82,7 +82,7 @@ public class ProcessorImpl implements Processor {
    * Updates Redis and manages H3 cell transitions. Checks if the asset moved to a new hexagon and
    * cleans up the old cell.
    */
-  private Mono<Void> upsertRedisState(MessageEvent event) {
+  private Mono<Void> upsertAssertCurrentEventRedisCache(MessageEvent event) {
 
     return redisAssetStateWriter.upsert(event);
   }
@@ -94,7 +94,7 @@ public class ProcessorImpl implements Processor {
         .operatorId(event.getOperatorId()).latitude(event.getLatitude())
         .longitude(event.getLongitude())
         .location(Point.of(event.getLongitude(), event.getLatitude())).speed(event.getSpeed())
-        .h3Index(h3Service.toH3CellAddress(event.getLatitude(), event.getLongitude(),
+        .h3Index(h3Service.getH3CellIndex(event.getLatitude(), event.getLongitude(),
             H3Constants.H3_RESOLUTION_8))
         .speed(event.getSpeed()).heading(event.getHeading()).processedAt(Instant.now()).build();
   }
@@ -105,7 +105,7 @@ public class ProcessorImpl implements Processor {
         .longitude(event.getLongitude())
         .location(Point.of(event.getLongitude(), event.getLatitude())).speed(event.getSpeed())
         .heading(event.getHeading())
-        .h3Index(h3Service.toH3CellAddress(event.getLatitude(), event.getLongitude(),
+        .h3Index(h3Service.getH3CellIndex(event.getLatitude(), event.getLongitude(),
             H3Constants.H3_RESOLUTION_8))
         .processedAt(event.getProcessedAt() != null ? event.getProcessedAt() : Instant.now())
         .build();
