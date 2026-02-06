@@ -17,7 +17,7 @@ public class MyProfileResponse extends UserProfileResponse {
 
     return MyProfileResponse.builder().id(SafeExtractUtil.safeGet(() -> user.getId(), null))
         .username(SafeExtractUtil.safeGet(() -> user.getUsername(), ""))
-        .email(SafeExtractUtil.safeGet(() -> user.getEmail(), ""))
+        .email(SafeExtractUtil.safeGet(() -> user.getPrimaryEmail(), ""))
         .picture(SafeExtractUtil.safeGet(() -> user.getPicture(), ""))
         .firstName(SafeExtractUtil.safeGet(() -> user.getFirstName(), ""))
         .lastName(SafeExtractUtil.safeGet(() -> user.getLastName(), ""))

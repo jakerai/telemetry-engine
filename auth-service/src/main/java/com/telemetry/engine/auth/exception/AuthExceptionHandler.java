@@ -19,6 +19,7 @@ import com.telemetry.engine.common.exception.DataPersistenceException;
 import com.telemetry.engine.common.exception.DuplicateResourceException;
 import com.telemetry.engine.common.exception.FileUploadException;
 import com.telemetry.engine.common.exception.InvalidCodeException;
+import com.telemetry.engine.common.exception.InvalidRedirectUriException;
 import com.telemetry.engine.common.exception.InvalidTokenException;
 import com.telemetry.engine.common.exception.JwtKeyStoreException;
 import com.telemetry.engine.common.exception.NotFoundException;
@@ -149,5 +150,12 @@ public class AuthExceptionHandler {
       return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
               .body(ServiceResponse.error(ex.getMessage(), HttpStatus.UNAUTHORIZED.value()));
   }
+  
+  @ExceptionHandler(InvalidRedirectUriException.class)
+  public ResponseEntity<ServiceResponse<Void>> handleInvalidRedirectUriException(InvalidRedirectUriException ex) {
+      return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+              .body(ServiceResponse.error(ex.getMessage(), HttpStatus.UNAUTHORIZED.value()));
+  }
 
+  
 }

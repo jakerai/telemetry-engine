@@ -22,7 +22,7 @@ public class DatabaseJwtKeyStore implements JwtKeyStore {
 
   private final JdbcTemplate jdbcTemplate;
   private final ObjectMapper objectMapper;
-
+  
   @Override
   public Optional<JwtKeys> findKeys() {
     log.info("Fetching keys from DB");
@@ -35,8 +35,7 @@ public class DatabaseJwtKeyStore implements JwtKeyStore {
           return JwtKeys.builder().id(rs.getLong("id"))
               .keys(objectMapper.readValue(rs.getString("keys"),
                   objectMapper.getTypeFactory().constructCollectionType(List.class, Key.class)))
-              .version(rs.getLong("version"))
-              .build();
+              .version(rs.getLong("version")).build();
         } catch (Exception e) {
           throw new JwtKeyStoreException("Failed to deserialize JSONB keys");
         }
@@ -71,8 +70,7 @@ public class DatabaseJwtKeyStore implements JwtKeyStore {
   @Override
   @Transactional
   public boolean rotateKeysAtomically(String expectedCurrentKid, JwtKeys newKeys) {
-    log.info("Attempting atomic rotation for kid={}",
-        expectedCurrentKid);
+    log.info("Attempting atomic rotation for kid={}", expectedCurrentKid);
 
     String jsonNewKeys = toJson(newKeys.getKeys());
     String filterJson = buildCurrentKidFilter(expectedCurrentKid);

@@ -20,13 +20,13 @@ import lombok.experimental.SuperBuilder;
 @AllArgsConstructor
 @SuperBuilder
 @Entity
-@Table(name = "jwt_keys")
+@Table(name = "jwt_keys", schema = "auth")
 public class JwtKeys extends BaseEntity {
   @Version
   private Long version;
-  
-  @JdbcTypeCode(SqlTypes.JSON) 
+
+  @JdbcTypeCode(SqlTypes.JSON)
   @Column(name = "keys", columnDefinition = "jsonb")
-  private List<Key> keys; // should contain max 2 elements: previous and current
-  
+  private List<Key> keys; /* should contain max 2 elements: previous and current */
+
 }

@@ -24,7 +24,10 @@ public class ApiEndpointsConstants {
       {"/api/external/v1/auth/signup", "/api/external/v1/auth/login",
           "/api/external/v1/auth/refresh-token", "/api/external/v1/auth/forgot-password",
           "/api/external/v1/auth/reset-password", "/api/v1/ingest", "/actuator/**", "/ws/v1/ingest",
-          "/com.telemetry.engine.ingestion.protocol.grpc.IngestionService/**"};
+          "/com.telemetry.engine.ingestion.protocol.grpc.IngestionService/**",
+          "/oauth2/**",
+          "/login/oauth2/**",
+          "/api/oauth2/**"};
 
 
   private static final String[] INTERNAL_ONLY_ENDPOINTS =

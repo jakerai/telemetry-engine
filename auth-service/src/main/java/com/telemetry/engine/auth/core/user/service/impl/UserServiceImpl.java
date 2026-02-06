@@ -19,11 +19,14 @@ import com.telemetry.engine.auth.core.role.entity.Role;
 import com.telemetry.engine.auth.core.role.service.RoleService;
 import com.telemetry.engine.auth.core.user.dto.UserDto;
 import com.telemetry.engine.auth.core.user.entity.User;
+import com.telemetry.engine.auth.core.user.entity.UserOauthProvider;
 import com.telemetry.engine.auth.core.user.mapper.UserMapper;
+import com.telemetry.engine.auth.core.user.persistence.UserOauthProviderPersistence;
 import com.telemetry.engine.auth.core.user.persistence.UserPersistence;
 import com.telemetry.engine.auth.core.user.service.UserService;
 import com.telemetry.engine.auth.security.model.AuthenticatedUser;
 import com.telemetry.engine.auth.util.AuthUtil;
+import com.telemetry.engine.auth.util.PasswordGenerator;
 import com.telemetry.engine.common.dto.response.ServiceResponse;
 import com.telemetry.engine.common.exception.DuplicateResourceException;
 import com.telemetry.engine.common.exception.NotFoundException;
@@ -37,6 +40,7 @@ public class UserServiceImpl implements UserService {
 
   private final PasswordEncoder passwordEncoder;
   private final UserPersistence userPersistence;
+  private final UserOauthProviderPersistence userOauthProviderPersistence;
   private final FileService fileStorageService;
   private final RoleService roleService;
 
@@ -127,7 +131,7 @@ public class UserServiceImpl implements UserService {
     // Assign role
     assignRole(user, signupRequest.getUserType());
 
-    log.info("User Created successfully: id={}, email={}", user.getId(), user.getEmail());
+    log.info("User Created successfully: id={}, email={}", user.getId(), user.getPrimaryEmail());
     UserDto userDto = UserMapper.toUserDto(user);
     return enrichUserWithRoles(user, userDto);
 
@@ -191,8 +195,7 @@ public class UserServiceImpl implements UserService {
     user = userPersistence.save(user);
     log.info("Updated profile picture for user with user ID={} path={}", user.getId(), filePath);
 
-    PictureUploadResponse data =
-        PictureUploadResponse.builder().picture(user.getPicture()).build();
+    PictureUploadResponse data = PictureUploadResponse.builder().picture(user.getPicture()).build();
 
     return ServiceResponse.success(data, "Profile picture uploaded successfully");
   }
@@ -209,8 +212,8 @@ public class UserServiceImpl implements UserService {
   public void markEmailVerified(Long userId) {
     log.info("Updating email as verified for user ID={}", userId);
     User user = findByIdOrThrow(userId);
-    if (!user.isEmailVerified()) {
-      user.setEmailVerified(true);
+    if (!user.isPrimaryEmailVerified()) {
+      user.setPrimaryEmailVerified(true);
       userPersistence.save(user);
     }
   }
@@ -220,8 +223,8 @@ public class UserServiceImpl implements UserService {
   public void markMobileNumberVerified(Long userId) {
     log.info("Updating mobile number as verified for user ID={}", userId);
     User user = findByIdOrThrow(userId);
-    if (!user.isMobileNumberVerified()) {
-      user.setMobileNumberVerified(true);
+    if (!user.isPrimaryMobileNumberVerified()) {
+      user.setPrimaryMobileNumberVerified(true);
       userPersistence.save(user);
     }
   }
@@ -233,6 +236,41 @@ public class UserServiceImpl implements UserService {
     User user = findByIdOrThrow(userId);
     user.setPassword(passwordEncoder.encode(newPassword));
     user = userPersistence.save(user);
+  }
+
+
+  @Override
+  public UserDto findOrCreateOAuthUser(String email, String provider, String providerUserId,
+      String firstName, String lastName, String role) {
+    log.info("Creating user with email={} for provider={}", email, provider);
+
+    Optional<User> userOpt = userPersistence.findByEmail(email);
+    User user = null;
+    if (userOpt.isEmpty()) {
+      log.warn("User new User");
+      user = User.builder().firstName(firstName).lastName(lastName).primaryEmail(email)
+          .username(email).password(PasswordGenerator.generate()).build();
+      user.setPassword(passwordEncoder.encode(user.getPassword()));
+      user = userPersistence.save(user);
+      assignRole(user, role);
+
+      log.info("User Created successfully: id={}, email={}", user.getId(), user.getPrimaryEmail());
+    } else {
+      log.warn("Existing User");
+      user = userOpt.get();
+    }
+
+    Optional<UserOauthProvider> userOauthProviderOpt =
+        userOauthProviderPersistence.findByUserIdAndProvider(user.getId(), provider);
+    /* Save UserOauthProvider only if the data not found for provided provider */
+    if (userOauthProviderOpt.isEmpty()) {
+      UserOauthProvider userOauthProvider = UserOauthProvider.builder().user(user)
+          .provider(provider).providerUserId(providerUserId).build();
+      userOauthProviderPersistence.save(userOauthProvider);
+    }
+
+    UserDto userDto = UserMapper.toUserDto(user);
+    return enrichUserWithRoles(user, userDto);
   }
 
 }

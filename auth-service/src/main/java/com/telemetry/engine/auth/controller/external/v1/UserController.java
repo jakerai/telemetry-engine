@@ -16,6 +16,9 @@ import com.telemetry.engine.auth.core.identity.dto.response.UserProfileResponse;
 import com.telemetry.engine.auth.core.user.service.UserService;
 import com.telemetry.engine.common.dto.response.ServiceResponse;
 
+/**
+ * @author Vishal Rai
+ */
 
 @RequestMapping(path = "/api/external/v1/users")
 @RestController

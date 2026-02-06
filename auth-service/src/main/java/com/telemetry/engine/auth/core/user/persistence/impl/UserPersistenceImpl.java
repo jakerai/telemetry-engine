@@ -24,8 +24,7 @@ public class UserPersistenceImpl implements UserPersistence {
     try {
       return userRepository.save(user);
     } catch (DataAccessException ex) {
-      log.error("DB error while saving user: email={}", user.getEmail(),
-          ex);
+      log.error("DB error while saving user: email={}", user.getPrimaryEmail(), ex);
       throw new DataPersistenceException("Failed to save user");
     }
   }
@@ -37,21 +36,19 @@ public class UserPersistenceImpl implements UserPersistence {
     try {
       return userRepository.findByUsername(username);
     } catch (DataAccessException ex) {
-      log.error("DB error while fetching user: username={}",
-          username, ex);
+      log.error("DB error while fetching user: username={}", username, ex);
       throw new DataPersistenceException("Failed to fetch user");
     }
   }
 
 
   @Override
-  public Optional<User> findByEmail(String email) {
-    Assert.hasText(email, "Email must not be null or empty");
+  public Optional<User> findByEmail(String primaryEmail) {
+    Assert.hasText(primaryEmail, "Email must not be null or empty");
     try {
-      return userRepository.findByEmail(email);
+      return userRepository.findByPrimaryEmail(primaryEmail);
     } catch (DataAccessException ex) {
-      log.error("DB error while fetching user: email={}", email,
-          ex);
+      log.error("DB error while fetching user: email={}", primaryEmail, ex);
       throw new DataPersistenceException("Failed to fetch user");
     }
   }
@@ -63,8 +60,7 @@ public class UserPersistenceImpl implements UserPersistence {
     try {
       return userRepository.findById(userId);
     } catch (DataAccessException ex) {
-      log.error("DB error while fetching user: user ID={}", userId,
-          ex);
+      log.error("DB error while fetching user: user ID={}", userId, ex);
       throw new DataPersistenceException("Failed to fetch user");
     }
   }

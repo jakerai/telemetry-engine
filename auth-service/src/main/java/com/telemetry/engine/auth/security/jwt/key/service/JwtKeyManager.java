@@ -14,7 +14,7 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
-import com.telemetry.engine.auth.config.JwtProperties;
+import com.telemetry.engine.auth.config.AppSecurityProperties;
 import com.telemetry.engine.auth.security.jwt.key.enums.JwtKeyStatus;
 import com.telemetry.engine.auth.security.jwt.key.model.JwtKeys;
 import com.telemetry.engine.auth.security.jwt.key.model.Key;
@@ -32,7 +32,7 @@ public class JwtKeyManager {
   private final JwtKeyStore jwtKeyStore;
   private final KeyEncryptionService encryption;
   private final RsaKeyGenerator generator;
-  private final JwtProperties props;
+  private final AppSecurityProperties props;
 
   private volatile Key currentKey;
   private volatile Key previousKey;
@@ -149,7 +149,7 @@ public class JwtKeyManager {
   }
 
   private synchronized void rotateIfNeeded() {
-    long rotateBeforeSeconds = props.getRotation().getRotateBeforeSeconds();
+    long rotateBeforeSeconds = props.getJwt().getRotation().getRotateBeforeSeconds();
     log.info("Checking if rotation is required: rotateBeforeSeconds={}", rotateBeforeSeconds);
     Key localCurrent = this.currentKey;
     Key localPrevious = this.previousKey;
@@ -192,7 +192,8 @@ public class JwtKeyManager {
         .publicKey(Base64.getEncoder().encodeToString(kp.getPublic().getEncoded()))
         .encryptedPrivateKey(Base64.getEncoder().encodeToString(encryptedBytes))
         .status(JwtKeyStatus.CURRENT)
-        .expiresAt(Instant.now().plusSeconds(props.getRotation().getValiditySeconds())).build();
+        .expiresAt(Instant.now().plusSeconds(props.getJwt().getRotation().getValiditySeconds()))
+        .build();
   }
 
   private Key createNewKeyAndSave() {

@@ -15,32 +15,27 @@ public class UserMapper {
   public static User toEntity(SignupRequest dto) {
     if (dto == null) {
       return null;
-  }
+    }
 
-  String requestedRole = dto.getUserType();
+    String requestedRole = dto.getUserType();
 
-  if (requestedRole == null || requestedRole.isBlank()) {
+    if (requestedRole == null || requestedRole.isBlank()) {
       throw new NotFoundException("userType is required");
-  }
+    }
 
-  requestedRole = requestedRole.trim().toUpperCase();
+    requestedRole = requestedRole.trim().toUpperCase();
 
-  // Validating against existing roles 
-  if (!RoleInitializer.getAllRoles().contains(requestedRole)) {
-      log.info("Invalid userType={} : valid types are {}",
-              requestedRole, RoleInitializer.getAllRoles());
+    // Validating against existing roles
+    if (!RoleInitializer.getAllRoles().contains(requestedRole)) {
+      log.info("Invalid userType={} : valid types are {}", requestedRole,
+          RoleInitializer.getAllRoles());
 
       throw new NotFoundException("Invalid userType: " + requestedRole);
-  }
+    }
 
-  return User.builder()
-          .username(dto.getEmail())
-          .email(dto.getEmail())
-          .password(dto.getPassword())
-          .firstName(dto.getFirstName())
-          .lastName(dto.getLastName())
-          .mobileNumber(dto.getMobileNumber())
-          .build();
+    return User.builder().username(dto.getEmail()).primaryEmail(dto.getEmail())
+        .password(dto.getPassword()).firstName(dto.getFirstName()).lastName(dto.getLastName())
+        .primaryMobileNumber(dto.getMobileNumber()).build();
   }
 
 
@@ -48,8 +43,8 @@ public class UserMapper {
     if (entity == null)
       return null;
 
-    return UserDto.builder().id(entity.getId()).username(entity.getEmail()).email(entity.getEmail())
-        .firstName(entity.getFirstName()).status(entity.getStatus())
+    return UserDto.builder().id(entity.getId()).username(entity.getPrimaryEmail())
+        .email(entity.getPrimaryEmail()).firstName(entity.getFirstName()).status(entity.getStatus())
         .createdAt(entity.getCreatedAt()).modifiedAt(entity.getModifiedAt()).build();
   }
 
@@ -72,5 +67,5 @@ public class UserMapper {
         .build();
   }
 
-  
+
 }

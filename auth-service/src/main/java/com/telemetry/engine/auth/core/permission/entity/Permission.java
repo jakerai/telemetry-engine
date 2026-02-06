@@ -24,7 +24,8 @@ import lombok.experimental.SuperBuilder;
 @AllArgsConstructor
 @SuperBuilder
 @Entity
-@Table(name = "permissions", indexes = {@Index(name = "idx_permission", columnList = "type")})
+@Table(name = "permissions", schema = "auth",
+    indexes = {@Index(name = "idx_permission", columnList = "type")})
 public class Permission extends BaseEntity {
 
   @Column(name = "type", nullable = false, unique = true, length = 50)

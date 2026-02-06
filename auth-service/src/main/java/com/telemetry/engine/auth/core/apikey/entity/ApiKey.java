@@ -19,8 +19,9 @@ import lombok.experimental.SuperBuilder;
 @AllArgsConstructor
 @SuperBuilder
 @Entity
-@Table(name = "asset_keys", indexes = {@Index(name = "idx_key", columnList = "key", unique = true),
-    @Index(name = "idx_asset_key_status", columnList = "revoked, expires_at")})
+@Table(name = "asset_keys", schema = "auth",
+    indexes = {@Index(name = "idx_key", columnList = "key", unique = true),
+        @Index(name = "idx_asset_key_status", columnList = "revoked, expires_at")})
 public class ApiKey extends BaseEntity {
 
   @Column(name = "key", nullable = false, unique = true)
@@ -48,5 +49,5 @@ public class ApiKey extends BaseEntity {
     return active && !revoked && (expiresAt == null || expiresAt.isAfter(Instant.now()));
   }
 
- 
+
 }

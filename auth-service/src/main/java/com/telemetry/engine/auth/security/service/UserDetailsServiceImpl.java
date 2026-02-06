@@ -36,7 +36,7 @@ public class UserDetailsServiceImpl implements UserDetailsService {
 
   private void validateUserStatus(User user) {
     log.info("Validating user status: email={}",
-        user.getEmail());
+        user.getPrimaryEmail());
     switch (user.getStatus()) {
       case BANNED:
         throw new DisabledException("Account is banned");
@@ -54,7 +54,7 @@ public class UserDetailsServiceImpl implements UserDetailsService {
       default:
         // User is active, continue
     }
-    log.info("User status validation passed: email={}", user.getEmail());
+    log.info("User status validation passed: email={}", user.getPrimaryEmail());
   }
 
 }

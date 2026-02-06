@@ -1,7 +1,7 @@
 package com.telemetry.engine.auth.security.jwt.key.factory;
 
 import org.springframework.stereotype.Component;
-import com.telemetry.engine.auth.config.JwtProperties;
+import com.telemetry.engine.auth.config.AppSecurityProperties;
 import com.telemetry.engine.auth.security.jwt.key.store.JwtKeyStore;
 import com.telemetry.engine.auth.security.jwt.key.store.impl.AwsJwtKeyStore;
 import com.telemetry.engine.auth.security.jwt.key.store.impl.DatabaseJwtKeyStore;
@@ -24,14 +24,14 @@ public class JwtKeyStoreFactory {
 
   private final DatabaseJwtKeyStore databaseJwtKeyStore;
   private final AwsJwtKeyStore awsJwtKeyStore;
-  private final JwtProperties jwtProperties;
+  private final AppSecurityProperties jwtProperties;
 
   public JwtKeyStore getStore() {
-    return switch (jwtProperties.getKeySource().toLowerCase()) {
+    return switch (jwtProperties.getJwt().getKeySource().toLowerCase()) {
       case "aws", "aws-secret" -> awsJwtKeyStore;
       case "db", "database" -> databaseJwtKeyStore;
       default -> throw new IllegalStateException(
-          "Unsupported jwt.key-source: " + jwtProperties.getKeySource());
+          "Unsupported jwt.key-source: " + jwtProperties.getJwt().getKeySource());
     };
   }
 

@@ -1,4 +1,4 @@
-package com.telemetry.engine.auth.aws.config;
+package com.telemetry.engine.auth.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

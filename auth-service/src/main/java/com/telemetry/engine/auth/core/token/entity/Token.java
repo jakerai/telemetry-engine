@@ -23,7 +23,7 @@ import lombok.experimental.SuperBuilder;
 @AllArgsConstructor
 @SuperBuilder
 @Entity
-@Table(name = "token",
+@Table(name = "token", schema = "auth",
     indexes = {@Index(name = "idx_token_user_id", columnList = "user_id"),
         @Index(name = "idx_token_value", columnList = "value"),
         @Index(name = "idx_token_type", columnList = "type"),

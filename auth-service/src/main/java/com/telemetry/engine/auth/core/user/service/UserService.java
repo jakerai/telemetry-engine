@@ -14,13 +14,13 @@ import com.telemetry.engine.common.dto.response.ServiceResponse;
 public interface UserService {
 
   User findByUsernameOrThrow(String username);
-  
+
   Optional<UserDto> findByEmail(String email);
-  
+
   UserDto createUserOrThrow(SignupRequest signupRequest);
-  
+
   UserDto updateLoginMetadataOrThrow(Long userId, String ip, Instant loginAt);
-  
+
   ServiceResponse<MyProfileResponse> getMyProfile();
 
   ServiceResponse<UserProfileResponse> getUserProfileById(Long userId);
@@ -34,5 +34,8 @@ public interface UserService {
   void markMobileNumberVerified(Long userId);
 
   void updatePassword(Long userId, String newPassword);
-  
- }
+
+  UserDto findOrCreateOAuthUser(String email, String provider, String providerUserId,
+      String firstName, String lastName, String role);
+
+}

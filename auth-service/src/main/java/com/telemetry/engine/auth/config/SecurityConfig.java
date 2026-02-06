@@ -1,5 +1,7 @@
 package com.telemetry.engine.auth.config;
 
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import org.springframework.context.annotation.Bean;
@@ -19,8 +21,13 @@ import org.springframework.security.oauth2.server.resource.authentication.JwtAut
 import org.springframework.security.oauth2.server.resource.web.authentication.BearerTokenAuthenticationFilter;
 import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.AuthenticationFailureHandler;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.telemetry.engine.auth.security.jwt.filter.JwtSecurityFilter;
+import com.telemetry.engine.auth.util.RedirectUriValidator;
 import com.telemetry.engine.common.constansts.ApiEndpointsConstants;
 import com.telemetry.engine.common.dto.response.ServiceResponse;
 import jakarta.servlet.http.HttpServletResponse;
@@ -35,29 +42,50 @@ public class SecurityConfig {
   private final JwtSecurityFilter requestFilter;
   private final ObjectMapper objectMapper;
   private final JwtDecoder jwtDecoder;
+  private final RedirectUriValidator redirectUriValidator;
 
   public SecurityConfig(JwtDecoder jwtDecoder, JwtSecurityFilter requestFilter,
-      ObjectMapper objectMapper) {
+      ObjectMapper objectMapper, RedirectUriValidator redirectUriValidator) {
     this.jwtDecoder = jwtDecoder;
     this.requestFilter = requestFilter;
     this.objectMapper = objectMapper;
-
+    this.redirectUriValidator = redirectUriValidator;
   }
 
   @Bean
   public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-    http.cors(cors -> cors.disable()).csrf(csrf -> csrf.disable())
+    http.cors(cors -> cors.configurationSource(corsConfigurationSource()))
+        /* Disabling CSRF for STATELESS REST APIs */
+        .csrf(csrf -> csrf.disable())
         .authorizeHttpRequests(
             (authz) -> authz.requestMatchers(ApiEndpointsConstants.ALL_PUBLIC_INTERNAL_ENDPOINTS)
                 .permitAll().anyRequest().authenticated())
         .sessionManagement((sessionManagement) -> {
-          sessionManagement.sessionCreationPolicy(SessionCreationPolicy.STATELESS);
+          sessionManagement.sessionCreationPolicy(
+              SessionCreationPolicy.IF_REQUIRED); /* IF_REQUIRED requires for oauth2 */
+        }).oauth2Login(oauth2 -> {
+          /* redirect after successful login */
+          oauth2.defaultSuccessUrl("/api/oauth2/login/success", true)
+              .failureHandler(oAuth2FailureHandler());
         })
         .oauth2ResourceServer(oauth2 -> oauth2.jwt(
             jwt -> jwt.decoder(jwtDecoder).jwtAuthenticationConverter(jwtAuthenticationConverter()))
             .authenticationEntryPoint(jwtAuthenticationEntryPoint(objectMapper)))
         .addFilterAfter(requestFilter, BearerTokenAuthenticationFilter.class);
     return http.build();
+  }
+
+  @Bean
+  public CorsConfigurationSource corsConfigurationSource() {
+    CorsConfiguration config = new CorsConfiguration();
+    config.setAllowedOrigins(List.of("http://localhost:3000")); /* FRONTEND */
+    config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+    config.setAllowCredentials(true); /* required for cookies */
+    config.setAllowedHeaders(List.of("*"));
+
+    UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+    source.registerCorsConfiguration("/**", config);
+    return source;
   }
 
   @Bean
@@ -83,6 +111,19 @@ public class SecurityConfig {
     return authConverter;
   }
 
+  private AuthenticationFailureHandler oAuth2FailureHandler() {
+    return (request, response, exception) -> {
+
+      log.error("OAuth2 login failed", exception);
+      String redirectUri = request.getParameter("redirect_uri");
+      String errorMessage =
+          URLEncoder.encode("Authentication failed. Please try again.", StandardCharsets.UTF_8);
+      redirectUri = redirectUriValidator.validateAndNormalize(redirectUri);
+      response.sendRedirect(redirectUri + "?error=" + errorMessage);
+    };
+  }
+
+
 
   @Bean
   public PasswordEncoder passwordEncoder() {
@@ -99,10 +140,8 @@ public class SecurityConfig {
     return (request, response, ex) -> {
       response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
       response.setContentType("application/json");
-
-      ServiceResponse<?> responseStatus = ServiceResponse.builder().message("Invalid or missing token")
-          .status(response.getStatus()).build();
-
+      ServiceResponse<?> responseStatus = ServiceResponse.builder()
+          .message("Invalid or missing token").status(response.getStatus()).build();
       response.getWriter().write(objectMapper.writeValueAsString(responseStatus));
     };
   }

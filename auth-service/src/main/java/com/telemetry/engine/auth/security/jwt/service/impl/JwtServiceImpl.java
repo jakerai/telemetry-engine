@@ -4,6 +4,8 @@ import java.time.Instant;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Service;
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JOSEObjectType;
@@ -19,10 +21,11 @@ import com.nimbusds.jose.jwk.RSAKey;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
 import com.telemetry.engine.auth.config.JwtConfig;
-import com.telemetry.engine.auth.config.JwtProperties;
+import com.telemetry.engine.auth.config.AppSecurityProperties;
 import com.telemetry.engine.auth.security.jwt.enums.TokenType;
 import com.telemetry.engine.auth.security.jwt.service.JwtService;
 import com.telemetry.engine.auth.security.model.JwtToken;
+import com.telemetry.engine.common.exception.InvalidTokenException;
 import com.telemetry.engine.common.exception.TokenGenerationException;
 import com.telemetry.engine.common.utils.SafeExtractUtil;
 import lombok.RequiredArgsConstructor;
@@ -34,7 +37,7 @@ import lombok.extern.slf4j.Slf4j;
 public class JwtServiceImpl implements JwtService {
 
   private final JwtConfig jwtConfig;
-  private final JwtProperties props;
+  private final AppSecurityProperties props;
 
 
   @Override
@@ -51,9 +54,9 @@ public class JwtServiceImpl implements JwtService {
 
       JWSSigner signer = new RSASSASigner(rsaKey.toPrivateKey());
       Instant now = Instant.now();
-      JWTClaimsSet claims = new JWTClaimsSet.Builder().subject(subject).issuer(props.getIssuer())
-          .issueTime(Date.from(now))
-          .expirationTime(Date.from(now.plusSeconds(props.getAccessExpiry())))
+      JWTClaimsSet claims = new JWTClaimsSet.Builder().subject(subject)
+          .issuer(props.getJwt().getIssuer()).issueTime(Date.from(now))
+          .expirationTime(Date.from(now.plusSeconds(props.getJwt().getAccessExpiry())))
           .claim("userId", userId).claim("roles", roles).claim("type", "ACCESS")
           .claim("permissions", permissions).claim("refreshTokenId", refreshTokenId).build();
 
@@ -62,8 +65,8 @@ public class JwtServiceImpl implements JwtService {
       SignedJWT signedJWT = new SignedJWT(header, claims);
       signedJWT.sign(signer);
       return JwtToken.builder().value(signedJWT.serialize())
-          .expirationTime(claims.getExpirationTime().toInstant()).expiresIn(props.getAccessExpiry())
-          .build();
+          .expirationTime(claims.getExpirationTime().toInstant())
+          .expiresIn(props.getJwt().getAccessExpiry()).build();
     } catch (JOSEException ex) {
       log.error("Failed to generate access token for userId={}", userId, ex);
       throw new TokenGenerationException("Unable to generate token, please try again later");
@@ -81,9 +84,9 @@ public class JwtServiceImpl implements JwtService {
 
       JWSSigner signer = new RSASSASigner(rsaKey.toPrivateKey());
       Instant now = Instant.now();
-      JWTClaimsSet claims = new JWTClaimsSet.Builder().subject(subject).issuer(props.getIssuer())
-          .issueTime(Date.from(now))
-          .expirationTime(Date.from(now.plusSeconds(props.getRefreshExpiry())))
+      JWTClaimsSet claims = new JWTClaimsSet.Builder().subject(subject)
+          .issuer(props.getJwt().getIssuer()).issueTime(Date.from(now))
+          .expirationTime(Date.from(now.plusSeconds(props.getJwt().getRefreshExpiry())))
           .claim("userId", userId).claim("type", "REFRESH").build();
 
       JWSHeader header = new JWSHeader.Builder(JWSAlgorithm.RS256).keyID(rsaKey.getKeyID())
@@ -93,7 +96,7 @@ public class JwtServiceImpl implements JwtService {
 
       return JwtToken.builder().value(signedJWT.serialize())
           .expirationTime(claims.getExpirationTime().toInstant())
-          .expiresIn(props.getRefreshExpiry()).build();
+          .expiresIn(props.getJwt().getRefreshExpiry()).build();
     } catch (JOSEException ex) {
       log.error("Failed to generate refresh token for userId={}", userId, ex);
       throw new TokenGenerationException("Unable to generate token, please try again later");
@@ -127,5 +130,43 @@ public class JwtServiceImpl implements JwtService {
     JWKSet jwkSet = new JWKSet(publicKey);
     return jwkSet.toJSONObject();
   }
+
+  @Override
+  public Jwt parseToken(String token) {
+    try {
+      SignedJWT signedJwt = SignedJWT.parse(token);
+
+      RSAKey rsaKey = jwtConfig.getCurrentRsaKey();
+      JWSVerifier verifier = new RSASSAVerifier(rsaKey.toPublicJWK());
+
+      if (!signedJwt.verify(verifier)) {
+        throw new InvalidTokenException("JWT signature verification failed");
+      }
+
+      JWTClaimsSet claims = signedJwt.getJWTClaimsSet();
+
+      // Optional: check token type
+      String type = claims.getStringClaim("type");
+      if (type == null || (!type.equals("ACCESS") && !type.equals("REFRESH"))) {
+        throw new InvalidTokenException("Invalid token type");
+      }
+
+      Instant issuedAt =
+          claims.getIssueTime() != null ? claims.getIssueTime().toInstant() : Instant.now();
+
+      Instant expiresAt = Optional.ofNullable(claims.getExpirationTime()).map(Date::toInstant)
+          .orElseThrow(() -> new InvalidTokenException("Token missing expiration"));
+
+      Map<String, Object> headers = Map.of("alg", signedJwt.getHeader().getAlgorithm().getName(),
+          "kid", signedJwt.getHeader().getKeyID());
+
+      return new Jwt(token, issuedAt, expiresAt, headers, claims.getClaims());
+
+    } catch (Exception ex) {
+      log.error("Failed to parse or validate JWT", ex);
+      throw new InvalidTokenException("Invalid token");
+    }
+  }
+
 
 }

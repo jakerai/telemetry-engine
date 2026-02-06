@@ -19,7 +19,7 @@ import lombok.experimental.SuperBuilder;
 @AllArgsConstructor
 @SuperBuilder
 @Entity
-@Table(name = "activity")
+@Table(name = "activity", schema = "auth")
 public class Activity extends BaseEntity {
   @Enumerated(EnumType.STRING)
   @Column(name = "action", nullable = false, length = 50)
@@ -27,10 +27,10 @@ public class Activity extends BaseEntity {
 
   @Column(name = "user_id")
   private Long userId;
-  
+
   @Column(name = "remarks", length = 500)
   private String remarks;
 
   @Column(name = "ip", length = 45)
-  private String ip; 
+  private String ip;
 }

@@ -1,6 +1,8 @@
 package com.telemetry.engine.auth.core.identity.service.impl;
 
 import java.time.Instant;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -10,12 +12,17 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
+import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
+import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
+import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.telemetry.engine.auth.constants.RoleConstants;
 import com.telemetry.engine.auth.core.activity.enums.Action;
 import com.telemetry.engine.auth.core.activity.service.ActivityService;
 import com.telemetry.engine.auth.core.identity.dto.request.LoginRequest;
+import com.telemetry.engine.auth.core.identity.dto.request.MobileOauth2LoginRequest;
 import com.telemetry.engine.auth.core.identity.dto.request.PasswordForgotRequest;
 import com.telemetry.engine.auth.core.identity.dto.request.PasswordResetRequest;
 import com.telemetry.engine.auth.core.identity.dto.request.SignupRequest;
@@ -109,7 +116,108 @@ public class IdentityServiceImpl implements IdentityService {
     log.info("Login request for email={} from ip={}", loginRequest.getEmail(), clientIp);
 
     AuthenticatedUser user = authenticateUser(loginRequest.getEmail(), loginRequest.getPassword());
-    UserDto userDto = userService.updateLoginMetadataOrThrow(user.getId(), clientIp, Instant.now());
+    LoginResponse data = buildLoginResponseOnSuccess(user.getId(), clientIp);
+
+    log.info("Login successful for email: {}", user.getUser().getPrimaryEmail());
+
+    return ServiceResponse.success(data, "Login successfully");
+  }
+
+  @Transactional
+  @Override
+  public ServiceResponse<LoginResponse> loginOauth2Web(OAuth2User oauth2User,
+      OAuth2AuthenticationToken authentication) {
+
+    String clientIp = RequestContext.getClientIp();
+    log.info("Oauth2 login request for from ip={}", clientIp);
+    
+    String provider = authentication.getAuthorizedClientRegistrationId();
+    
+    /* Extracting profile safely (firstName, lastName, email, providerUserId) */
+    Map<String, String> profile = extractOAuthProfile(provider, oauth2User);
+
+    String email = profile.get("email");
+    if (email == null) {
+      throw new OAuth2AuthenticationException("Email not found from provider: " + provider);
+    }
+
+    String firstName = profile.get("firstName");
+    String lastName = profile.get("lastName");
+    String providerUserId = profile.get("providerUserId");
+
+    /* Sync or create user in DB */
+    UserDto user = userService.findOrCreateOAuthUser(email, provider, providerUserId, firstName,
+        lastName, RoleConstants.DEFAULT_USER_ROLE);
+
+    LoginResponse data = buildLoginResponseOnSuccess(user.getId(), clientIp);
+
+    log.info("Oauth2 Login successful for email: {}", user.getEmail());
+    return ServiceResponse.success(data, "Oauth2 login successfully");
+  }
+  
+  
+  @Override
+  public ServiceResponse<LoginResponse> loginOauth2Mobile(
+      ServiceRequest<MobileOauth2LoginRequest> serviceRequest) {
+   
+    return null;
+  }
+
+
+  private Map<String, String> extractOAuthProfile(String provider, OAuth2User user) {
+
+    Map<String, String> profile = new HashMap<>();
+
+    String firstName = null;
+    String lastName = null;
+    String email = null;
+    String providerUserId = null;
+
+    if ("google".equals(provider)) {
+      providerUserId = user.getAttribute("sub"); // Google ID
+      email = user.getAttribute("email");
+      firstName = user.getAttribute("given_name");
+      lastName = user.getAttribute("family_name");
+    }
+
+    else if ("facebook".equals(provider)) {
+      providerUserId = user.getAttribute("id");
+      email = user.getAttribute("email");
+      firstName = user.getAttribute("first_name");
+      lastName = user.getAttribute("last_name");
+    }
+
+    else if ("github".equals(provider)) {
+      Object id = user.getAttribute("id");
+      providerUserId = id != null ? String.valueOf(id) : null;
+
+      email = user.getAttribute("email");
+
+      String name = user.getAttribute("name");
+      if (name != null && !name.isBlank()) {
+        int idx = name.indexOf(' ');
+        if (idx > 0) {
+          firstName = name.substring(0, idx);
+          lastName = name.substring(idx + 1);
+        } else {
+          firstName = name;
+        }
+      } else {
+        firstName = user.getAttribute("login");
+      }
+    }
+
+    profile.put("provider", provider);
+    profile.put("providerUserId", providerUserId);
+    profile.put("email", email);
+    profile.put("firstName", firstName);
+    profile.put("lastName", lastName);
+
+    return profile;
+  }
+  
+  private LoginResponse buildLoginResponseOnSuccess(Long userId, String clientIp) {
+    UserDto userDto = userService.updateLoginMetadataOrThrow(userId, clientIp, Instant.now());
 
     activityService.logActivity(Action.LOGIN_SUCCESS, userDto.getId(), clientIp);
 
@@ -124,12 +232,8 @@ public class IdentityServiceImpl implements IdentityService {
         jwtService.generateAccessTokenOrThrow(userDto.getUsername(), userDto.getId(),
             userDto.getRolesAsList(), userDto.getPermissionsAsList(), refreshToken.getId());
 
-    LoginResponse data = LoginResponse.from(generatedAccessToken.getValue(),
-        generatedAccessToken.getExpiresIn(), generatedRefreshToken.getValue(), userDto);
-
-    log.info("Login successful for email: {}", userDto.getEmail());
-
-    return ServiceResponse.success(data, "Login successfully");
+    return LoginResponse.from(generatedAccessToken.getValue(), generatedAccessToken.getExpiresIn(),
+        generatedRefreshToken.getValue(), userDto);
   }
 
   @Override
@@ -250,5 +354,5 @@ public class IdentityServiceImpl implements IdentityService {
     return ServiceResponse.success("Password reset requested successfully");
   }
 
-
+  
 }

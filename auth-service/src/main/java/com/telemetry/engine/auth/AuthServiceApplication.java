@@ -11,6 +11,10 @@ import com.telemetry.engine.auth.security.model.AuthenticatedUser;
 import com.telemetry.engine.auth.util.AuthUtil;
 import com.telemetry.engine.common.exception.UnauthorizedException;
 
+/**
+ * @author Vishal Rai
+ */
+
 @SpringBootApplication
 @EnableScheduling
 @EnableJpaAuditing(auditorAwareRef = "auditorProvider")

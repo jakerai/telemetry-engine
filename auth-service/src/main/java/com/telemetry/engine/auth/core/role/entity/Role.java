@@ -27,30 +27,25 @@ import lombok.experimental.SuperBuilder;
 @AllArgsConstructor
 @SuperBuilder
 @Entity
-@Table(name = "role", indexes = {@Index(name = "idx_role_name", columnList = "name")})
+@Table(name = "role", schema = "auth",
+    indexes = {@Index(name = "idx_role_name", columnList = "name")})
 public class Role extends BaseEntity {
 
   @Column(nullable = false, unique = true, length = 50)
   private String name;
 
   @Builder.Default
-  @ManyToMany(
-      fetch = FetchType.EAGER,
-      cascade = {CascadeType.PERSIST, CascadeType.MERGE}
-  )
-  @JoinTable(
-      name = "role_permissions",
-      joinColumns = @JoinColumn(name = "role_id"),
+  @ManyToMany(fetch = FetchType.EAGER, cascade = {CascadeType.PERSIST, CascadeType.MERGE})
+  @JoinTable(name = "role_permissions", joinColumns = @JoinColumn(name = "role_id"),
       inverseJoinColumns = @JoinColumn(name = "permission_id"),
-      uniqueConstraints = @UniqueConstraint(columnNames = {"role_id", "permission_id"})
-  )
+      uniqueConstraints = @UniqueConstraint(columnNames = {"role_id", "permission_id"}))
   private Set<Permission> permissions = new HashSet<>();
 
   public void addPermission(Permission permission) {
-      permissions.add(permission);
-      permission.getRoles().add(this);
+    permissions.add(permission);
+    permission.getRoles().add(this);
   }
-  
+
   public void removePermission(Permission permission) {
     permissions.remove(permission);
     permission.getRoles().remove(this);

@@ -3,7 +3,7 @@ package com.telemetry.engine.auth.security.jwt.key.service;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import org.springframework.stereotype.Component;
-import com.telemetry.engine.auth.config.JwtProperties;
+import com.telemetry.engine.auth.config.AppSecurityProperties;
 import com.telemetry.engine.common.constansts.Algorithms;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -13,7 +13,7 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor
 public class RsaKeyGenerator {
 
-  private final JwtProperties props;
+  private final AppSecurityProperties props;
 
   /**
    * Generates a new RSA public/private key pair for JWT signing.
@@ -24,7 +24,7 @@ public class RsaKeyGenerator {
     log.info("[RsaKeyGenerator.generate] Generating a new RSA public/private key pair");
     try {
       KeyPairGenerator gen = KeyPairGenerator.getInstance(Algorithms.RSA);
-      gen.initialize(props.getRsa().getKeySize());
+      gen.initialize(props.getJwt().getRsa().getKeySize());
       return gen.generateKeyPair();
     } catch (Exception e) {
       log.error("Error while generating a new RSA public/private key pair");

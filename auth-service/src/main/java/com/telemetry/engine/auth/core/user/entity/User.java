@@ -29,23 +29,27 @@ import lombok.experimental.SuperBuilder;
 @NoArgsConstructor
 @Entity
 @SuperBuilder
-@Table(name = "users",
+@Table(name = "users", schema = "auth",
     indexes = {@Index(name = "idx_user_username", columnList = "username"),
-        @Index(name = "idx_user_email", columnList = "email"),
+        @Index(name = "idx_user_primary_email", columnList = "primary_email"),
         @Index(name = "idx_user_created_at", columnList = "created_at")})
 public class User extends BaseEntity {
 
   @Column(name = "username", nullable = false, unique = true, length = 255)
   private String username;
 
-  @Column(name = "email", nullable = false, unique = true, length = 320)
-  private String email;
+  @Column(name = "primary_email", nullable = false, unique = true, length = 320)
+  private String primaryEmail;
 
-  @Column(name = "mobile_number", length = 20, nullable = true)
-  private String mobileNumber;
+  @Column(name = "primary_mobile_number", length = 20, nullable = true)
+  private String primaryMobileNumber;
 
   @Column(name = "password", nullable = false)
   private String password;
+
+  @Column(name = "password_login_enabled")
+  @Builder.Default
+  private boolean passwordLoginEnabled = false;
 
   @Column(name = "first_name", length = 100, nullable = true)
   private String firstName;
@@ -56,13 +60,13 @@ public class User extends BaseEntity {
   @Column(name = "picture", length = 500, nullable = true)
   private String picture;
 
-  @Column(name = "email_verified")
+  @Column(name = "primary_email_verified")
   @Builder.Default
-  private boolean emailVerified = false;
+  private boolean primaryEmailVerified = false;
 
-  @Column(name = "mobile_number_verified")
+  @Column(name = "primary_mobile_number_verified")
   @Builder.Default
-  private boolean mobileNumberVerified = false;
+  private boolean primaryMobileNumberVerified = false;
 
   @Enumerated(EnumType.STRING)
   @Column(name = "status", nullable = false, length = 50)
@@ -84,11 +88,8 @@ public class User extends BaseEntity {
 
   @Builder.Default
   @ManyToMany(fetch = FetchType.EAGER)
-  @JoinTable(
-      name = "user_roles",
-      joinColumns = @JoinColumn(name = "user_id"),
-      inverseJoinColumns = @JoinColumn(name = "role_id")
-  )
+  @JoinTable(name = "user_roles", joinColumns = @JoinColumn(name = "user_id"),
+      inverseJoinColumns = @JoinColumn(name = "role_id"))
   private Set<Role> roles = new HashSet<>();
-  
- }
+
+}

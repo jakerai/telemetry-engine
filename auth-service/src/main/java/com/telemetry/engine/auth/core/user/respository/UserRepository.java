@@ -8,7 +8,7 @@ import com.telemetry.engine.auth.core.user.entity.User;
 @Repository
 public interface UserRepository extends CrudRepository<User, Long> {
 
-  Optional<User> findByEmail(String email);
+  Optional<User> findByPrimaryEmail(String primaryEmail);
 
   Optional<User> findByUsername(String username);
 

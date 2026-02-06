@@ -2,6 +2,7 @@ package com.telemetry.engine.auth.security.jwt.service;
 
 import java.util.List;
 import java.util.Map;
+import org.springframework.security.oauth2.jwt.Jwt;
 import com.telemetry.engine.auth.security.model.JwtToken;
 
 public interface JwtService {
@@ -14,5 +15,6 @@ public interface JwtService {
   boolean validateRefreshToken(String token);
 
   Map<String, Object> getJwks();
-
+  
+  Jwt parseToken(String token);
 }
