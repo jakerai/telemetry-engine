@@ -1,0 +1,16 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: api-gateway-alerts
+  namespace: telemetry
+spec:
+  groups:
+    - name: gateway.rules
+      rules:
+        - alert: HighCPUUsage
+          expr: sum(rate(container_cpu_usage_seconds_total{pod=~"api-gateway.*"}[2m])) > 0.8
+          for: 2m
+          labels:
+            severity: warning
+          annotations:
+            summary: "High CPU usage on API Gateway"

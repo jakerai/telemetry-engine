@@ -1,0 +1,9 @@
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: fast-storage
+provisioner: kubernetes.io/aws-ebs   # change to your cloud provider
+parameters:
+  type: gp2
+reclaimPolicy: Retain
+volumeBindingMode: Immediate

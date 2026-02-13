@@ -1,53 +1,15 @@
-server:
-  port: 5003
-  
 spring:
   application:
     name: query-service
+
   config:
-    import: classpath:asset-metadata.yaml, optional:configserver
+    import: >
+      classpath:asset-metadata.yaml,
+      optional:configserver:${CONFIG_SERVER_URL:http://localhost:8888}
+
   cloud:
     config:
-      enabled: false
-  jackson:
-    default-property-inclusion: non_null
-  r2dbc:
-    url: r2dbc:postgresql://localhost:5433/telemetry
-    username: admin
-    password: Admin123
-    pool:
-      initial-size: 5
-      max-size: 20
+      fail-fast: true
 
-redis:
-  uri: redis://:Test321redis$@localhost:6379
-    
-management:
-  endpoints:
-    web:
-      exposure:
-        include: health,info,metrics,prometheus,gateway,refresh
-  tracing:
-    sampling:
-      # Trace 100% of requests in dev; reduce in prod
-      probability: 1.0
-  otlp:
-    tracing:
-      enabled: false
-      # OTLP collector endpoint (gRPC)
-      #endpoint: http://localhost:4317
-    otlp:
-    metrics:
-      export:
-        enabled: false
-      
 
-logging:
-  pattern:
-    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [%thread] [${spring.application.name:}, traceId=%X{traceId:-}, spanId=%X{spanId:-}] [%logger{0}.%M:%L] - %msg%n"
-  level:
-    root: INFO
-    com.telemetry.engine: DEBUG 
-    org.springframework.security: DEBUG
-    org.hibernate.SQL: DEBUG
-      
+

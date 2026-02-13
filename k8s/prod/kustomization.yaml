@@ -1,0 +1,8 @@
+resources:
+  - ../base
+
+patches:
+  - replicas.yaml
+  - hpa.yaml
+  - resources.yaml
+  - image-tags.yaml

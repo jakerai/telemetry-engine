@@ -1,0 +1,14 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: api-gateway-monitor
+  namespace: telemetry
+  labels:
+    release: prometheus
+spec:
+  selector:
+    matchLabels:
+      app: api-gateway
+  endpoints:
+    - port: 8080
+      interval: 30s

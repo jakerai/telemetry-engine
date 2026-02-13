@@ -1,0 +1,6 @@
+resources:
+  - ../base
+
+patches:
+  - replicas.yaml
+  - image-tags.yaml

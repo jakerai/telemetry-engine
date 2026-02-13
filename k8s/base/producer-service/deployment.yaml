@@ -1,0 +1,25 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: producer-service
+  namespace: telemetry
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: producer-service
+  template:
+    metadata:
+      labels:
+        app: producer-service
+    spec:
+      containers:
+        - name: producer-service
+          image: your-docker/producer-service:latest
+          ports:
+            - containerPort: 8080
+          envFrom:
+            - configMapRef:
+                name: app-config
+            - secretRef:
+                name: app-secrets

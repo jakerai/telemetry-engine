@@ -1,9 +1,10 @@
 spring:
   application:
-    name: consumer-service
+    name: query-service
 
   config:
     import: >
+      classpath:asset-metadata.yaml,
       optional:configserver:${CONFIG_SERVER_URL:http://localhost:8888}
 
   cloud:

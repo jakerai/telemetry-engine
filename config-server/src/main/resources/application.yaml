@@ -1,3 +1,14 @@
+# default port for config-server 8888
+server:
+  port: 8888
+
 spring:
   application:
     name: config-server
+  profiles:
+    active: native  
+  cloud:
+    config:
+      server:
+        native:
+          search-locations: classpath:/configs/{profile}

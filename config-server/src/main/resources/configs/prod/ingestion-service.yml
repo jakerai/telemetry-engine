@@ -1,0 +1,79 @@
+server:
+  port: 5001
+  shutdown: graceful
+  
+grpc:
+    server:
+      port: 9090
+      reflection-enabled: true
+      max-inbound-message-size: 20MB
+      keep-alive:
+        time: 5s
+        timeout: 20s
+        permit-without-calls: true
+        max-idle: 2m
+        max-age: 10m
+        max-age-grace: 30s
+  
+spring:
+  application:
+    name: ingestion-service
+  jackson:
+    default-property-inclusion: non_null
+  cloud:
+    config:
+      enabled: false
+  lifecycle:
+    timeout-per-shutdown-phase: 30s
+
+redis:
+  uri: redis://:Test321$$$@localhost:6379
+  
+kafka:
+  bootstrap:
+    # Kafka broker addresses (comma-separated for multiple brokers)
+    servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}  # default to localhost
+  username: ${KAFKA_USERNAME:} # empty by default
+  password: ${KAFKA_PASSWORD:} # empty by default
+  security:
+    # Security protocol to use
+    # PLAINTEXT       - no auth (dev/local)
+    # SASL_PLAINTEXT  - SASL authentication over plaintext
+    # SASL_SSL        - SASL authentication over SSL/TLS
+    # SSL             - SSL/TLS encryption without SASL auth
+    protocol: ${KAFKA_SECURITY_PROTOCOL:PLAINTEXT} # default PLAINTEXT
+    sasl:
+      # SASL mechanism (used only if protocol is SASL_PLAINTEXT or SASL_SSL)
+      mechanism: ${KAFKA_SASL_MECHANISM:} # PLAIN by default (Options: SCRAM-SHA-256, SCRAM-SHA-512, PLAIN, GSSAPI (Kerberos))
+  group:
+    id: ${KAFKA_GROUP_ID:consumer-group-1} # Kafka consumer group
+  topic: ingestion-topic
+   
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus,gateway,refresh
+  tracing:
+    sampling:
+      # Trace 100% of requests in dev; reduce in prod
+      probability: 1.0
+  otlp:
+    tracing:
+      enabled: false
+      # OTLP collector endpoint (gRPC)
+      #endpoint: http://localhost:4317
+    otlp:
+    metrics:
+      export:
+        enabled: false
+      
+
+logging:
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [%thread] [${spring.application.name:}, traceId=%X{traceId:-}, spanId=%X{spanId:-}] [%logger{0}.%M:%L] - %msg%n"
+  level:
+    root: INFO
+    com.telemetry.engine: DEBUG 
+    org.springframework.security: DEBUG
+    org.hibernate.SQL: DEBUG

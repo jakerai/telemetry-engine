@@ -1,9 +1,10 @@
 spring:
   application:
-    name: consumer-service
+    name: auth-service
 
   config:
     import: >
+      classpath:roles.yaml,
       optional:configserver:${CONFIG_SERVER_URL:http://localhost:8888}
 
   cloud:

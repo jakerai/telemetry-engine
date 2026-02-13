@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-config
+  namespace: telemetry
+data:
+  KAFKA_BROKER: kafka:9092
+  DB_HOST: postgres
+  LOG_LEVEL: INFO

@@ -1,0 +1,13 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: telemetry-rolebinding
+  namespace: telemetry
+subjects:
+  - kind: ServiceAccount
+    name: telemetry-sa
+    namespace: telemetry
+roleRef:
+  kind: Role
+  name: telemetry-role
+  apiGroup: rbac.authorization.k8s.io
